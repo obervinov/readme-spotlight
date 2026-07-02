@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {{if .Running}}<meta http-equiv="refresh" content="2">{{end}}
+  <title>readme-spotlight</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    h1 { margin-bottom: 0; }
+    .sub { color: #888; margin-top: .2rem; }
+    fieldset { border: 1px solid #8884; border-radius: 8px; margin: 1rem 0; padding: 1rem; }
+    legend { font-weight: 600; padding: 0 .4rem; }
+    label { display: block; margin: .5rem 0 .15rem; font-size: .9rem; font-weight: 600; }
+    input[type=text], input[type=number], select { width: 100%; padding: .45rem; border: 1px solid #8886; border-radius: 6px; box-sizing: border-box; background: transparent; color: inherit; }
+    .row { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .row > div { flex: 1; min-width: 180px; }
+    .cols { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .cols label { display: flex; align-items: center; gap: .35rem; font-weight: 400; }
+    .cols input { width: auto; }
+    button { padding: .55rem 1rem; border: 0; border-radius: 6px; background: #2da44e; color: #fff; font-weight: 600; cursor: pointer; }
+    button.secondary { background: #57606a; }
+    .status { border-left: 3px solid #2da44e; padding: .5rem .8rem; background: #2da44e14; border-radius: 4px; }
+    .status.err { border-color: #cf222e; background: #cf222e14; }
+    pre { overflow-x: auto; background: #8881; padding: 1rem; border-radius: 8px; font-size: .8rem; }
+    pre.log { font-size: .78rem; line-height: 1.45; color: #57606a; max-height: 320px; overflow-y: auto; white-space: pre-wrap; }
+    .actions { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+    .savebar { position: sticky; bottom: 0; margin: 1rem -1rem 0; padding: .8rem 1rem;
+      background: Canvas; border-top: 1px solid #8886; display: flex; gap: 1rem;
+      align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .savebar span { color: #888; font-size: .82rem; }
+    .savebar button { font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>readme-spotlight</h1>
+  <p class="sub">Keep your profile README's open-source contributions block fresh.</p>
+
+  <fieldset>
+    <legend>Status</legend>
+    {{if .Running}}
+      <div class="status">A run is in progress…</div>
+    {{else if .LastErr}}
+      <div class="status err">{{.LastErr}}{{if .LastRun}} <span style="color:#888">({{.LastRun}})</span>{{end}}</div>
+    {{else if .LastMsg}}
+      <div class="status">{{.LastMsg}} <span style="color:#888">({{.LastRun}})</span></div>
+    {{else}}
+      <div class="status">No runs yet. Refresh to collect your contributions, then publish to your profile.</div>
+    {{end}}
+    <div class="actions" style="margin-top:.8rem">
+      <form method="post" action="/run"><button type="submit">Refresh data</button></form>
+      <form method="post" action="/publish"><button type="submit" class="secondary">Publish to README now</button></form>
+    </div>
+    <p style="color:#888;font-size:.82rem;margin:.6rem 0 0">
+      Refresh collects contributions (no changes to your profile). Publish writes the latest data into the target README below.
+    </p>
+  </fieldset>
+
+  <form method="post" action="/config">
+    <fieldset>
+      <legend>Target</legend>
+      <label>Profile repository (owner/name) <span style="font-weight:400;color:#888">— required to publish</span></label>
+      <input type="text" name="target_repo" value="{{.Config.TargetRepo}}" placeholder="obervinov/obervinov">
+      <div class="row">
+        <div><label>Branch</label><input type="text" name="target_branch" value="{{.Config.TargetBranch}}"></div>
+        <div><label>README path</label><input type="text" name="readme_path" value="{{.Config.ReadmePath}}"></div>
+      </div>
+      <p style="color:#888;font-size:.8rem;margin:.6rem 0 0">
+        Sections are written between <code>{{.Config.MarkerStart}}</code> and <code>{{.Config.MarkerEnd}}</code> in the README.
+      </p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Banner</legend>
+      <label><input type="checkbox" name="banner_enabled" {{if .Config.Banner.Enabled}}checked{{end}}> Show banner</label>
+      <label>Name</label>
+      <input type="text" name="banner_name" value="{{.Config.Banner.Name}}" placeholder="Hey, I'm Oleg">
+      <div class="row">
+        <div><label>Role</label><input type="text" name="banner_role" value="{{.Config.Banner.Role}}" placeholder="Senior Platform Engineer"></div>
+        <div><label>Accent colour</label><input type="text" name="banner_accent" value="{{.Config.Banner.Accent}}" placeholder="#3fb950"></div>
+      </div>
+      <label>Tagline</label>
+      <input type="text" name="banner_tagline" value="{{.Config.Banner.Tagline}}">
+    </fieldset>
+
+    <fieldset>
+      <legend>Positioning</legend>
+      <label><input type="checkbox" name="positioning_enabled" {{if .Config.Positioning.Enabled}}checked{{end}}> Show this section</label>
+      <label>Statement <span style="font-weight:400;color:#888">— first sentence is emphasised, the rest is muted</span></label>
+      <textarea name="positioning_text" rows="3" style="width:100%;padding:.45rem;border:1px solid #8886;border-radius:6px;box-sizing:border-box;background:transparent;color:inherit;font-size:.85rem">{{.Config.Positioning.Text}}</textarea>
+      <label>Accent colour</label>
+      <input type="text" name="positioning_accent" value="{{.Config.Positioning.Accent}}" placeholder="#3fb950">
+    </fieldset>
+
+    <fieldset>
+      <legend>What I Do</legend>
+      <label><input type="checkbox" name="focus_enabled" {{if .Config.Focus.Enabled}}checked{{end}}> Show this section</label>
+      <div class="row">
+        <div><label>Heading</label><input type="text" name="focus_title" value="{{.Config.Focus.Title}}" placeholder="What I Do"></div>
+        <div><label>Accent colour</label><input type="text" name="focus_accent" value="{{.Config.Focus.Accent}}" placeholder="#3fb950"></div>
+      </div>
+      <label>Items <span style="font-weight:400;color:#888">— one per line, <code>Title | description</code></span></label>
+      <textarea name="focus_items" rows="7" style="width:100%;padding:.45rem;border:1px solid #8886;border-radius:6px;box-sizing:border-box;background:transparent;color:inherit;font-family:ui-monospace,monospace;font-size:.82rem">{{.Config.FocusText}}</textarea>
+    </fieldset>
+
+    <fieldset>
+      <legend>Technology &amp; Tools</legend>
+      <label><input type="checkbox" name="tech_enabled" {{if .Config.Tech.Enabled}}checked{{end}}> Show this section</label>
+      <div class="row">
+        <div><label>Heading</label><input type="text" name="tech_title" value="{{.Config.Tech.Title}}" placeholder="Technology &amp; Tools"></div>
+        <div><label>Accent colour</label><input type="text" name="tech_accent" value="{{.Config.Tech.Accent}}" placeholder="#3fb950"></div>
+      </div>
+      <label>Groups <span style="font-weight:400;color:#888">— one per line, <code>Group name: item, item, item</code></span></label>
+      <textarea name="tech_groups" rows="8" style="width:100%;padding:.45rem;border:1px solid #8886;border-radius:6px;box-sizing:border-box;background:transparent;color:inherit;font-family:ui-monospace,monospace;font-size:.82rem">{{.Config.TechText}}</textarea>
+    </fieldset>
+
+    <fieldset>
+      <legend>Contributions</legend>
+      <label>Title</label>
+      <input type="text" name="title" value="{{.Config.Title}}">
+      <label>Format</label>
+      <select name="format">
+        <option value="hybrid" {{if eq .Config.Format "hybrid"}}selected{{end}}>Hybrid (styled SVG card + expandable links)</option>
+        <option value="svg" {{if eq .Config.Format "svg"}}selected{{end}}>SVG card (styled, not clickable)</option>
+        <option value="details" {{if eq .Config.Format "details"}}selected{{end}}>Expandable (collapsible repo → PRs/issues)</option>
+        <option value="table" {{if eq .Config.Format "table"}}selected{{end}}>Table (one row per repo)</option>
+      </select>
+      <label>Columns <span style="font-weight:400;color:#888">(table format only)</span></label>
+      <div class="cols">
+        <label><input type="checkbox" name="col_language" {{if .Config.Columns.Language}}checked{{end}}> Language</label>
+        <label><input type="checkbox" name="col_stars" {{if .Config.Columns.Stars}}checked{{end}}> Stars</label>
+        <label><input type="checkbox" name="col_commits" {{if .Config.Columns.Commits}}checked{{end}}> Commits</label>
+        <label><input type="checkbox" name="col_prs" {{if .Config.Columns.PRs}}checked{{end}}> PRs</label>
+        <label><input type="checkbox" name="col_issues" {{if .Config.Columns.Issues}}checked{{end}}> Issues</label>
+        <label><input type="checkbox" name="col_reviews" {{if .Config.Columns.Reviews}}checked{{end}}> Reviews</label>
+        <label><input type="checkbox" name="col_total" {{if .Config.Columns.Total}}checked{{end}}> Total</label>
+      </div>
+      <div class="row">
+        <div>
+          <label>Sort by</label>
+          <select name="sort_by">
+            <option value="stars" {{if eq .Config.SortBy "stars"}}selected{{end}}>Stars</option>
+            <option value="total" {{if eq .Config.SortBy "total"}}selected{{end}}>Total contributions</option>
+          </select>
+        </div>
+        <div><label>Limit (0 = all)</label><input type="number" name="limit" min="0" value="{{.Config.Limit}}"></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Publish &amp; schedule</legend>
+      <div class="row">
+        <div>
+          <label>Publish mode</label>
+          <select name="publish_mode">
+            <option value="pr" {{if eq .Config.PublishMode "pr"}}selected{{end}}>Pull request</option>
+            <option value="commit" {{if eq .Config.PublishMode "commit"}}selected{{end}}>Direct commit</option>
+          </select>
+        </div>
+        <div><label>PR head branch</label><input type="text" name="pr_branch" value="{{.Config.PRBranch}}"></div>
+      </div>
+      <label>Schedule (cron, empty = manual only)</label>
+      <input type="text" name="schedule" value="{{.Config.Schedule}}" placeholder="0 6 * * *">
+    </fieldset>
+
+    <div class="savebar">
+      <span>These settings — target, block and schedule — are saved together.</span>
+      <button type="submit">Save all settings</button>
+    </div>
+  </form>
+
+  {{if .SVGs}}
+  <fieldset>
+    <legend>Preview</legend>
+    {{range .SVGs}}<div style="overflow-x:auto;margin-bottom:1rem">{{.}}</div>{{end}}
+  </fieldset>
+  {{end}}
+
+  {{if .Block}}
+  <fieldset>
+    <legend>Rendered block (what goes into the README)</legend>
+    <pre>{{.Block}}</pre>
+  </fieldset>
+  {{end}}
+
+  {{if .Logs}}
+  <fieldset>
+    <legend>Activity log</legend>
+    <pre class="log">{{range .Logs}}{{.Time}}  {{.Msg}}
+{{end}}</pre>
+  </fieldset>
+  {{end}}
+</body>
+</html>

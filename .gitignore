@@ -1,0 +1,21 @@
+# Binaries
+/readme-spotlight
+/bin/
+*.exe
+
+# Local data
+*.db
+*.db-shm
+*.db-wal
+/data/
+
+# SVGs generated locally by --print
+/contributions.svg
+/assets/
+
+# Env / secrets
+.env
+*.local
+
+# OS
+.DS_Store
