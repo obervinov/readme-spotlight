@@ -1,5 +1,0 @@
-name: probe
-on: push
-jobs:
-  golang:
-    uses: obervinov/_templates/.github/workflows/golang.yaml@v2.2.0
