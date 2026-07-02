@@ -28,8 +28,8 @@ import (
 
 func main() {
 	var (
-		addr     = flag.String("addr", ":8080", "web UI listen address")
-		dsn      = flag.String("db", "sqlite:./data/spotlight.db", "database DSN (sqlite:PATH or postgres://...)")
+		addr     = flag.String("addr", envOr("RS_ADDR", ":8080"), "web UI listen address (env RS_ADDR)")
+		dsn      = flag.String("db", envOr("RS_DATABASE_DSN", "sqlite:./data/spotlight.db"), "database DSN, sqlite:PATH or postgres://... (env RS_DATABASE_DSN)")
 		printOut = flag.Bool("print", false, "collect and print the block to stdout, then exit")
 		format   = flag.String("format", "table", "block format for --print: table | details")
 	)
@@ -98,6 +98,14 @@ func main() {
 	if err := httpSrv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// envOr returns the environment variable value for key, or def when unset.
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }
 
 // ensureSQLiteDir creates the parent directory for a sqlite DSN if needed.
