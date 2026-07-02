@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/obervinov/readme-spotlight/internal/auth"
 	"github.com/obervinov/readme-spotlight/internal/github"
 	"github.com/obervinov/readme-spotlight/internal/render"
 	"github.com/obervinov/readme-spotlight/internal/runner"
@@ -89,9 +90,15 @@ func main() {
 	}
 	sched.Start()
 	defer sched.Stop()
+
+	authenticator, err := auth.New(context.Background(), auth.FromEnv())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	httpSrv := &http.Server{
 		Addr:              *addr,
-		Handler:           srv.Handler(),
+		Handler:           srv.Handler(authenticator),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	log.Printf("readme-spotlight listening on %s", *addr)

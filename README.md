@@ -64,6 +64,17 @@ Both are idempotent: files that have not changed are not rewritten. A built-in
 cron refreshes and republishes on a configurable schedule; **Refresh** and
 **Publish** can also be triggered manually from the UI.
 
+## Authentication
+
+Off by default (the UI is open). Set `RS_AUTH_MODE` to guard it when exposed:
+
+- `basic` — HTTP Basic auth against `RS_BASIC_USER` / `RS_BASIC_PASSWORD`.
+- `oidc` — OpenID Connect login (e.g. Keycloak). Requires `RS_OIDC_ISSUER_URL`,
+  `RS_OIDC_CLIENT_ID`, `RS_OIDC_CLIENT_SECRET`, `RS_OIDC_REDIRECT_URL`
+  (`https://<host>/auth/callback`) and `RS_SESSION_SECRET`.
+
+`/healthz` and the OIDC login routes stay public; everything else is guarded.
+
 ## Storage
 
 SQLite by default (pure-Go, no CGO). Point `--db` at PostgreSQL to use that

@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/obervinov/readme-spotlight/internal/auth"
 	"github.com/obervinov/readme-spotlight/internal/config"
 	"github.com/obervinov/readme-spotlight/internal/logs"
 	"github.com/obervinov/readme-spotlight/internal/publish"
@@ -58,14 +59,23 @@ func NewServer(st *store.Store, r *runner.Runner, sc *scheduler.Scheduler) (*Ser
 	return s, nil
 }
 
-// Handler returns the router.
-func (s *Server) Handler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /", s.index)
-	mux.HandleFunc("POST /config", s.saveConfig)
-	mux.HandleFunc("POST /run", s.runRefresh)
-	mux.HandleFunc("POST /publish", s.runPublish)
-	return mux
+// Handler returns the router. The application routes are guarded by the given
+// authenticator; /healthz and the authenticator's own routes stay public.
+func (s *Server) Handler(a auth.Authenticator) http.Handler {
+	app := http.NewServeMux()
+	app.HandleFunc("GET /", s.index)
+	app.HandleFunc("POST /config", s.saveConfig)
+	app.HandleFunc("POST /run", s.runRefresh)
+	app.HandleFunc("POST /publish", s.runPublish)
+
+	root := http.NewServeMux()
+	root.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	a.Routes(root)
+	root.Handle("/", a.Wrap(app))
+	return root
 }
 
 // applySchedule points the cron entry at the full pipeline on the given spec.
