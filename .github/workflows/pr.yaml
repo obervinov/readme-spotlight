@@ -15,4 +15,3 @@ jobs:
   build-pr-image:
     uses: obervinov/_templates/.github/workflows/docker.yaml@v2.2.0
     needs: [pr, golang]
-    secrets: inherit
