@@ -1,7 +1,5 @@
 name: probe
 on: push
 jobs:
-  probe:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo ok
+  golang:
+    uses: obervinov/_templates/.github/workflows/golang.yaml@v2.2.0
