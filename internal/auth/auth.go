@@ -209,7 +209,10 @@ func (o *oidcAuth) callback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *oidcAuth) logout(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{
+		Name: sessionCookie, Value: "", Path: "/", MaxAge: -1,
+		HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode,
+	})
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 

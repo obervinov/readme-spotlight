@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.3 - 2026-07-31
+### What's Changed
+#### 🔒 Security
+- Bump `golang.org/x/text` to v0.39.0 (fixes CVE-2026-56852).
+- Set `HttpOnly`, `Secure` and `SameSite` on the session-logout cookie.
+- Add explicit least-scope `permissions` blocks to the PR and Release workflows.
+
 ## v0.1.2 - 2026-07-31
 ### What's Changed
 - Restructure the README: clearer quick-start, configuration, publishing and storage guides, plus a Kubernetes deployment example.

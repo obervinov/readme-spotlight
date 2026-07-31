@@ -5,6 +5,15 @@ on:
   push:
     branches: ['*', '*/*', '**', '!main']
 
+# Scoped for the reusable workflows: PR body updates, GHCR push and Trivy SARIF.
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+  security-events: write
+  actions: write
+  checks: read
+
 jobs:
   pr:
     uses: obervinov/_templates/.github/workflows/pr.yaml@v2.2.3
