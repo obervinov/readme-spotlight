@@ -26,6 +26,14 @@ builder. The contributions section still does the thing GitHub's own profile
 can't: it surfaces every external repository you have contributed to — including
 personal-account repos and buried org work — with per-item links.
 
+## Screenshots
+
+The composed profile it publishes, and the configuration UI:
+
+| Composed profile | Configuration UI |
+|:---:|:---:|
+| [![Composed profile](docs/screenshots/profile.png)](docs/screenshots/profile.png) | [![Configuration UI](docs/screenshots/webui.png)](docs/screenshots/webui.png) |
+
 ## Sections
 
 Rendered, in order, into the region between `<!--SPOTLIGHT:START-->` and
