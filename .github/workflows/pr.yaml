@@ -7,11 +7,11 @@ on:
 
 jobs:
   pr:
-    uses: obervinov/_templates/.github/workflows/pr.yaml@v2.2.2
+    uses: obervinov/_templates/.github/workflows/pr.yaml@v2.2.3
 
   golang:
-    uses: obervinov/_templates/.github/workflows/golang.yaml@v2.2.2
+    uses: obervinov/_templates/.github/workflows/golang.yaml@v2.2.3
 
   build-pr-image:
-    uses: obervinov/_templates/.github/workflows/docker.yaml@v2.2.2
+    uses: obervinov/_templates/.github/workflows/docker.yaml@v2.2.3
     needs: [pr, golang]
