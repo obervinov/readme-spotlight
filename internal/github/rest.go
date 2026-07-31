@@ -44,7 +44,7 @@ func (c *Client) rest(ctx context.Context, method, path string, body, out any) e
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusNotFound {
 		return ErrNotFound
 	}

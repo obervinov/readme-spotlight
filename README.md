@@ -1,5 +1,16 @@
 # readme-spotlight
 
+[![PR](https://github.com/obervinov/readme-spotlight/actions/workflows/pr.yaml/badge.svg?branch=main&event=pull_request)](https://github.com/obervinov/readme-spotlight/actions/workflows/pr.yaml)
+[![Release](https://github.com/obervinov/readme-spotlight/actions/workflows/release.yaml/badge.svg)](https://github.com/obervinov/readme-spotlight/actions/workflows/release.yaml)
+
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/obervinov/readme-spotlight?style=for-the-badge)
+![GitHub last commit](https://img.shields.io/github/last-commit/obervinov/readme-spotlight?style=for-the-badge)
+![GitHub Release Date](https://img.shields.io/github/release-date/obervinov/readme-spotlight?style=for-the-badge)
+![GitHub issues](https://img.shields.io/github/issues/obervinov/readme-spotlight?style=for-the-badge)
+![GitHub repo size](https://img.shields.io/github/repo-size/obervinov/readme-spotlight?style=for-the-badge)
+[![Go version](https://img.shields.io/badge/go-1.25-blue.svg?style=for-the-badge)](https://go.dev/dl/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
 Self-hosted tool that composes a GitHub profile README from styled SVG sections
 and keeps it up to date on a schedule.
 

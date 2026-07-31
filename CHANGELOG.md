@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.0 - 2026-07-02
+## v0.1.0 - 2026-07-31
 ### What's Changed
 - Initial release: composes a GitHub profile README from styled SVG sections — banner, positioning, what-I-do, technology (grouped), and open-source contributions.
 - Web UI with per-section configuration, live preview, manual refresh/publish and a built-in scheduler.
