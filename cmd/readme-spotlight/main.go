@@ -67,7 +67,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("open store: %v", err)
 	}
-	defer st.Close()
+	defer func() { _ = st.Close() }()
 
 	// Seed default config on first boot.
 	cfg, ok, err := st.GetConfig()
