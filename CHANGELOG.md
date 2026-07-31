@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.3 - 2026-08-01
+## v0.1.3 - 2026-07-31
 ### What's Changed
 #### 🔒 Security
 - Bump `golang.org/x/text` to v0.39.0 (fixes CVE-2026-56852).
