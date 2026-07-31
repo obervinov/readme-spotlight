@@ -49,59 +49,139 @@ Rendered, in order, into the region between `<!--SPOTLIGHT:START-->` and
 Each section is configurable and can be toggled off. All state is stored in the
 database, so nothing has to be reconfigured between runs.
 
-## Running
+## Quick start
+
+You need a GitHub token (a classic PAT with `public_repo`, `read:org` and
+`read:user`, or a fine-grained token with equivalent access). It is read from
+the environment and never written to the database.
 
 ```sh
-export GITHUB_TOKEN=<PAT with public_repo, read:org, read:user>
-go run ./cmd/readme-spotlight            # web UI + scheduler on :8080
+export GITHUB_TOKEN=<your token>
+go run ./cmd/readme-spotlight          # web UI + scheduler on http://localhost:8080
 ```
 
-Open <http://localhost:8080>, set the target repository, **Refresh** to collect
-data, preview the sections, then **Publish**. The GitHub token is read from the
-environment and never stored.
+Then, in the UI:
 
-There is also a one-shot mode for the contributions block:
+1. Set the **target repository** (your profile repo, e.g. `you/you`).
+2. **Refresh** — collects your contributions (nothing is published yet).
+3. Review the live **preview** of each section.
+4. **Publish** — writes the sections into the target README.
+
+Prefer just the contributions block, printed to stdout? Skip the UI:
 
 ```sh
 go run ./cmd/readme-spotlight --print --format hybrid
 ```
 
-### Docker
+## Configuration
 
-```sh
-docker run -p 8080:8080 -e GITHUB_TOKEN=... -v rs-data:/data \
-  ghcr.io/obervinov/readme-spotlight:latest
-```
+Everything is edited in the web UI and persisted in the database: which sections
+are shown, their content and accent colours, the contributions format
+(`table` / `details` / `svg` / `hybrid`), sorting, the target repository and
+markers, the publish mode, and the refresh schedule.
 
 ## Publishing
 
 - **Pull request** (default) — commits to a head branch and opens a PR, so the
-  profile's default branch only changes when you merge.
+  profile's default branch only changes when you merge it.
 - **Direct commit** — commits straight to the target branch.
 
-Both are idempotent: files that have not changed are not rewritten. A built-in
-cron refreshes and republishes on a configurable schedule; **Refresh** and
+Both are idempotent — files that have not changed are not rewritten. A built-in
+cron refreshes and republishes on the configured schedule; **Refresh** and
 **Publish** can also be triggered manually from the UI.
 
 ## Authentication
 
-Off by default (the UI is open). Set `RS_AUTH_MODE` to guard it when exposed:
+The UI is open by default. Set `RS_AUTH_MODE` to guard it when it is exposed:
 
-- `basic` — HTTP Basic auth against `RS_BASIC_USER` / `RS_BASIC_PASSWORD`.
-- `oidc` — OpenID Connect login (e.g. Keycloak). Requires `RS_OIDC_ISSUER_URL`,
-  `RS_OIDC_CLIENT_ID`, `RS_OIDC_CLIENT_SECRET`, `RS_OIDC_REDIRECT_URL`
-  (`https://<host>/auth/callback`) and `RS_SESSION_SECRET`.
+| Mode | Variables |
+|------|-----------|
+| `basic` | `RS_BASIC_USER`, `RS_BASIC_PASSWORD` |
+| `oidc` | `RS_OIDC_ISSUER_URL`, `RS_OIDC_CLIENT_ID`, `RS_OIDC_CLIENT_SECRET`, `RS_OIDC_REDIRECT_URL` (`https://<host>/auth/callback`), `RS_SESSION_SECRET` |
 
 `/healthz` and the OIDC login routes stay public; everything else is guarded.
 
 ## Storage
 
-SQLite by default (pure-Go, no CGO). Point `--db` at PostgreSQL to use that
-instead:
+SQLite by default (pure-Go, no CGO) at `./data/spotlight.db`. Point `--db` (or
+`RS_DATABASE_DSN`) at PostgreSQL to use that instead:
 
 ```sh
-go run ./cmd/readme-spotlight --db 'postgres://user:pass@host:5432/spotlight'
+go run ./cmd/readme-spotlight --db 'postgres://user:pass@host:5432/readme_spotlight?sslmode=disable'
 ```
+
+## Deployment
+
+### Docker
+
+```sh
+docker run -p 8080:8080 \
+  -e GITHUB_TOKEN=<your token> \
+  -v rs-data:/data \
+  ghcr.io/obervinov/readme-spotlight:latest
+```
+
+Images are multi-arch (`linux/amd64`, `linux/arm64`) and published to GHCR on
+every release.
+
+### Kubernetes
+
+Put the GitHub token in a `Secret`, then apply a `Deployment` + `Service`. This
+example uses PostgreSQL, so no volume is needed:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: readme-spotlight
+type: Opaque
+stringData:
+  GITHUB_TOKEN: <your token>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: readme-spotlight
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: readme-spotlight }
+  template:
+    metadata:
+      labels: { app: readme-spotlight }
+    spec:
+      containers:
+        - name: readme-spotlight
+          image: ghcr.io/obervinov/readme-spotlight:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef: { name: readme-spotlight, key: GITHUB_TOKEN }
+            - name: RS_DATABASE_DSN
+              value: postgres://user:pass@postgres:5432/readme_spotlight?sslmode=disable
+            # Guard the UI when exposing it (see Authentication):
+            # - name: RS_AUTH_MODE
+            #   value: oidc
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: readme-spotlight
+spec:
+  selector: { app: readme-spotlight }
+  ports:
+    - port: 80
+      targetPort: 8080
+```
+
+To use SQLite instead of PostgreSQL, drop `RS_DATABASE_DSN` and mount a
+`PersistentVolumeClaim` at `/data`.
 
 ## License
 

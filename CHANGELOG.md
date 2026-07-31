@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.2 - 2026-07-31
+### What's Changed
+- Restructure the README: clearer quick-start, configuration, publishing and storage guides, plus a Kubernetes deployment example.
+- Bump `modernc.org/sqlite` to v1.55.0 and `github.com/coreos/go-oidc/v3` to v3.20.0.
+
 ## v0.1.1 - 2026-07-31
 ### What's Changed
 - Add screenshots to the README: the composed profile and the configuration UI.
