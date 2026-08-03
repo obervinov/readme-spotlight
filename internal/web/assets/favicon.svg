@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="readme-spotlight">
+  <defs>
+    <linearGradient id="beam" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#3fb950" stop-opacity="1"/>
+      <stop offset="1" stop-color="#3fb950" stop-opacity="0.5"/>
+    </linearGradient>
+    <clipPath id="card">
+      <rect width="32" height="32" rx="7"/>
+    </clipPath>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="#0d1117"/>
+  <g clip-path="url(#card)">
+    <path d="M9.3 9.4 L12.7 6.6 L28.4 21.4 L20.6 27.6 Z" fill="url(#beam)"/>
+    <ellipse cx="24.3" cy="24.3" rx="6" ry="2.3" fill="#3fb950" transform="rotate(-39 24.3 24.3)"/>
+  </g>
+  <circle cx="11" cy="8" r="4" fill="#e6edf3"/>
+  <circle cx="11" cy="8" r="1.8" fill="#3fb950"/>
+</svg>

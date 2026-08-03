@@ -39,6 +39,10 @@ type Config struct {
 	OIDCClientSecret string
 	OIDCRedirectURL  string
 	SessionSecret    string
+
+	// APIToken enables the machine API (/api/*) when set. It is independent of
+	// Mode: agents authenticate with a bearer token, humans with Mode.
+	APIToken string
 }
 
 // FromEnv reads the auth configuration from RS_* environment variables.
@@ -52,6 +56,7 @@ func FromEnv() Config {
 		OIDCClientSecret: os.Getenv("RS_OIDC_CLIENT_SECRET"),
 		OIDCRedirectURL:  os.Getenv("RS_OIDC_REDIRECT_URL"),
 		SessionSecret:    os.Getenv("RS_SESSION_SECRET"),
+		APIToken:         os.Getenv("RS_API_TOKEN"),
 	}
 }
 

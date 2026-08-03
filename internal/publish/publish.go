@@ -17,9 +17,9 @@ const commitMessage = "chore(readme): refresh open-source contributions"
 
 // Result describes what a publish run did.
 type Result struct {
-	Changed bool   // false when the README already matched
-	Mode    string // "pr" or "commit"
-	URL     string // PR URL (pr mode) or repo URL (commit mode)
+	Changed bool   `json:"changed"` // false when the README already matched
+	Mode    string `json:"mode"`    // "pr" or "commit"
+	URL     string `json:"url"`     // PR URL (pr mode) or repo URL (commit mode)
 }
 
 // Merge replaces the region between start and end markers in content with block.
