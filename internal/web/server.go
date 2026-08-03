@@ -27,6 +27,9 @@ import (
 //go:embed templates/*.html
 var templatesFS embed.FS
 
+//go:embed assets/favicon.svg
+var faviconSVG []byte
+
 // Server holds the dependencies the HTTP handlers need and tracks the state of
 // the most recent run (manual or scheduled).
 type Server struct {
@@ -60,8 +63,10 @@ func NewServer(st *store.Store, r *runner.Runner, sc *scheduler.Scheduler) (*Ser
 }
 
 // Handler returns the router. The application routes are guarded by the given
-// authenticator; /healthz and the authenticator's own routes stay public.
-func (s *Server) Handler(a auth.Authenticator) http.Handler {
+// authenticator; /healthz and the authenticator's own routes stay public. When
+// api is non-nil the machine API is mounted under /api/ behind its own bearer
+// guard; when it is nil that prefix returns 404 so the API is closed by default.
+func (s *Server) Handler(a auth.Authenticator, api *auth.APIGuard) http.Handler {
 	app := http.NewServeMux()
 	app.HandleFunc("GET /", s.index)
 	app.HandleFunc("POST /config", s.saveConfig)
@@ -73,6 +78,20 @@ func (s *Server) Handler(a auth.Authenticator) http.Handler {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
+	// The favicon stays public so the tab icon also shows on the OIDC login redirect.
+	root.HandleFunc("GET /favicon.svg", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		_, _ = w.Write(faviconSVG)
+	})
+	if api != nil {
+		root.Handle("/api/", api.Wrap(s.apiMux()))
+	} else {
+		root.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
+			apiError(w, http.StatusNotFound, errAPIDisabled.Error())
+		})
+	}
+
 	a.Routes(root)
 	root.Handle("/", a.Wrap(app))
 	return root
@@ -83,38 +102,62 @@ func (s *Server) applySchedule(spec string) error {
 	return s.sched.Reschedule(spec, func() { s.start("scheduled", s.doFull) })
 }
 
-// start runs fn in the background, guarding against overlapping runs and
-// recording the outcome. It returns false if a run is already in flight.
-func (s *Server) start(label string, fn func(context.Context) (string, error)) bool {
+// acquire claims the single run slot, returning false if a run is in flight.
+func (s *Server) acquire() bool {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.running {
-		s.mu.Unlock()
 		return false
 	}
 	s.running = true
-	s.mu.Unlock()
+	return true
+}
 
+// finish releases the run slot and records the outcome for the UI.
+func (s *Server) finish(label, msg string, err error) {
+	s.mu.Lock()
+	s.running = false
+	s.lastAt = time.Now()
+	if err != nil {
+		s.lastErr = label + ": " + err.Error()
+		s.lastMsg = ""
+	} else {
+		s.lastErr = ""
+		s.lastMsg = msg
+	}
+	s.mu.Unlock()
+	if err != nil {
+		logs.Infof("%s: FAILED — %v", label, err)
+	} else {
+		logs.Infof("%s: done — %s", label, msg)
+	}
+}
+
+// start runs fn in the background, guarding against overlapping runs and
+// recording the outcome. It returns false if a run is already in flight.
+func (s *Server) start(label string, fn func(context.Context) (string, error)) bool {
+	if !s.acquire() {
+		return false
+	}
 	logs.Infof("%s: started", label)
 	go func() {
 		msg, err := fn(context.Background())
-		s.mu.Lock()
-		s.running = false
-		s.lastAt = time.Now()
-		if err != nil {
-			s.lastErr = label + ": " + err.Error()
-			s.lastMsg = ""
-		} else {
-			s.lastErr = ""
-			s.lastMsg = msg
-		}
-		s.mu.Unlock()
-		if err != nil {
-			logs.Infof("%s: FAILED — %v", label, err)
-		} else {
-			logs.Infof("%s: done — %s", label, msg)
-		}
+		s.finish(label, msg, err)
 	}()
 	return true
+}
+
+// runSync executes fn inline under the same single-run guard, so an API caller
+// gets the outcome in its response instead of having to poll. busy is true when
+// another run holds the slot.
+func (s *Server) runSync(ctx context.Context, label string, fn func(context.Context) (string, error)) (msg string, err error, busy bool) {
+	if !s.acquire() {
+		return "", nil, true
+	}
+	logs.Infof("%s: started", label)
+	msg, err = fn(ctx)
+	s.finish(label, msg, err)
+	return msg, err, false
 }
 
 func (s *Server) doRefresh(ctx context.Context) (string, error) {

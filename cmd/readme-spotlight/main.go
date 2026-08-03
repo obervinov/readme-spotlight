@@ -91,14 +91,24 @@ func main() {
 	sched.Start()
 	defer sched.Stop()
 
-	authenticator, err := auth.New(context.Background(), auth.FromEnv())
+	authCfg := auth.FromEnv()
+	authenticator, err := auth.New(context.Background(), authCfg)
 	if err != nil {
 		log.Fatal(err)
+	}
+	// A weak token is a startup failure, not a warning: the API writes to a Git
+	// repository with the service's GitHub token.
+	apiGuard, err := auth.NewAPIGuard(authCfg.APIToken)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if apiGuard != nil {
+		log.Print("machine API enabled at /api/ (bearer token)")
 	}
 
 	httpSrv := &http.Server{
 		Addr:              *addr,
-		Handler:           srv.Handler(authenticator),
+		Handler:           srv.Handler(authenticator, apiGuard),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	log.Printf("readme-spotlight listening on %s", *addr)

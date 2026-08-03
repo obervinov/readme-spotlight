@@ -80,6 +80,9 @@ are shown, their content and accent colours, the contributions format
 (`table` / `details` / `svg` / `hybrid`), sorting, the target repository and
 markers, the publish mode, and the refresh schedule.
 
+The section content can also be updated by a script or an agent over the
+[machine API](#machine-api).
+
 ## Publishing
 
 - **Pull request** (default) — commits to a head branch and opens a PR, so the
@@ -99,7 +102,58 @@ The UI is open by default. Set `RS_AUTH_MODE` to guard it when it is exposed:
 | `basic` | `RS_BASIC_USER`, `RS_BASIC_PASSWORD` |
 | `oidc` | `RS_OIDC_ISSUER_URL`, `RS_OIDC_CLIENT_ID`, `RS_OIDC_CLIENT_SECRET`, `RS_OIDC_REDIRECT_URL` (`https://<host>/auth/callback`), `RS_SESSION_SECRET` |
 
-`/healthz` and the OIDC login routes stay public; everything else is guarded.
+`/healthz`, `/favicon.svg` and the OIDC login routes stay public; everything else
+is guarded.
+
+## Machine API
+
+For keeping the wording in sync with an external source — a CV, a bio, whatever
+you already maintain elsewhere — without clicking through the UI. Disabled unless
+`RS_API_TOKEN` is set; the prefix returns `404` otherwise.
+
+```sh
+export RS_API_TOKEN=$(openssl rand -hex 32)   # 32 characters minimum, or startup fails
+```
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/content` | read the editable content |
+| `PATCH /api/content` | replace some content fields; omitted fields keep their value |
+| `POST /api/publish` | publish now, **always as a pull request** |
+
+```sh
+curl -sf -X PATCH https://<host>/api/content \
+  -H "Authorization: Bearer $RS_API_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"positioning":{"enabled":true,"text":"Platform & LLMOps engineer","accent":"#3fb950"}}'
+
+curl -sf -X POST https://<host>/api/publish -H "Authorization: Bearer $RS_API_TOKEN"
+```
+
+The API is a second front door to a service that holds a repository-write GitHub
+token, so its reach is capped by design:
+
+- **Content only.** `banner`, `positioning`, `focus`, `tech`, `title`, `format`,
+  `sort_by` and `limit` are writable. The fields deciding *where* and *how* the
+  service writes — target repository and branch, README path, markers, publish
+  mode, PR branch, schedule — are reachable only from the authenticated UI. An
+  unknown or out-of-reach field is rejected with `400`, never ignored.
+- **Pull requests only.** `POST /api/publish` opens a PR even when the stored
+  publish mode is `commit`, so an automated caller cannot land an unreviewed
+  commit. The stored mode is left untouched.
+- **Validated content.** Accents must be hex (they are interpolated into SVG),
+  text is length-capped and control characters are refused; bodies are capped at
+  64 KiB.
+- **Rate-limited.** Globally rather than per-IP, since a client-supplied
+  `X-Forwarded-For` cannot be trusted for budgeting. Authorised requests get
+  60/minute (burst 20); rejected ones get their own 10/minute (burst 5), so an
+  anonymous flood cannot starve the real caller. Ten consecutive authentication
+  failures lock the API for five minutes.
+- **Audited.** Every accepted write is logged with the fields it changed, and the
+  log is visible in the UI.
+
+Keep the network layer regardless: expose `/api` only to the networks that need
+it, and treat the token like the GitHub token it fronts.
 
 ## Storage
 

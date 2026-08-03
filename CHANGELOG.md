@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.2.0 - 2026-08-03
+### What's Changed
+- Add a machine API for keeping the section content in sync with an external source (e.g. a CV) without using the UI: `GET`/`PATCH /api/content` and `POST /api/publish`. Disabled unless `RS_API_TOKEN` is set.
+- Add a favicon, served publicly so it also shows on the OIDC login redirect.
+#### 🔒 Security
+- The machine API can write section content only — target repository, branch, README path, markers, publish mode, PR branch and schedule stay UI-only, and an out-of-reach field is rejected rather than ignored.
+- `POST /api/publish` always publishes through a pull request, even when the stored publish mode is `commit`.
+- Validate accent colours as hex before they are interpolated into SVG, cap content lengths and reject control characters; request bodies are capped at 64 KiB.
+- Bearer tokens are compared in constant time over a SHA-256 digest, accepted from the `Authorization` header only, and must be at least 32 characters or startup fails.
+- Rate-limit the API globally, with separate budgets for authorised (60/min) and rejected (10/min) requests so an anonymous flood cannot starve the real caller, and lock the API for five minutes after ten consecutive authentication failures.
+
 ## v0.1.3 - 2026-07-31
 ### What's Changed
 #### 🔒 Security

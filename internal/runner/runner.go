@@ -85,13 +85,35 @@ func compose(cfg config.Config, contribs []model.Contribution) render.Output {
 	return render.Output{Block: strings.Join(blocks, "\n\n"), Assets: assets}
 }
 
+// DefaultPRBranch is the head branch used when publishing is forced through a
+// pull request and no branch is configured.
+const DefaultPRBranch = "readme-spotlight/update"
+
 // Publish renders the composed region from the latest snapshot and writes it to
 // the target README (PR or direct commit, per config). It never collects fresh
 // data, so it is cheap to invoke repeatedly while testing.
 func (r *Runner) Publish(ctx context.Context) (publish.Result, error) {
+	return r.publish(ctx, false)
+}
+
+// PublishPR publishes through a pull request whatever the stored publish mode
+// says. The machine API uses this: an automated caller can propose a README
+// change but never land a commit unreviewed.
+func (r *Runner) PublishPR(ctx context.Context) (publish.Result, error) {
+	return r.publish(ctx, true)
+}
+
+func (r *Runner) publish(ctx context.Context, forcePR bool) (publish.Result, error) {
 	cfg, out, err := r.Compose()
 	if err != nil {
 		return publish.Result{}, err
+	}
+	if forcePR {
+		// cfg is a copy, so the stored configuration is untouched.
+		cfg.PublishMode = "pr"
+		if cfg.PRBranch == "" {
+			cfg.PRBranch = DefaultPRBranch
+		}
 	}
 	if cfg.TargetRepo == "" {
 		return publish.Result{}, errors.New("set a target repository first")
