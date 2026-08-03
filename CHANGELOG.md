@@ -4,6 +4,7 @@
 ### What's Changed
 - Stop the image from overriding its own configuration. `CMD` passed `--addr` and `--db`, and since the `RS_*` variables only supply each flag's default, those flags won: a deployment configured with `RS_DATABASE_DSN=postgres://…` silently kept its state in a container-local SQLite file and lost every configuration change with the next container. The defaults now come from `ENV`, which a caller can override.
 - Report which contributions were skipped, broken down by year, activity kind and whether it was the repository or the item that the token could not see. A bare total said something had been dropped but gave no handle on what.
+- Correct what v0.2.1 claimed about those skipped contributions. They are not necessarily private or deleted repositories: a fine-grained PAT is scoped to selected repositories, so activity anywhere else — the user's own repositories included — comes back as null. Own-repository activity is filtered out regardless, so a skip is not by itself missing data. A classic PAT resolves them, as the README already recommends.
 
 ## v0.2.1 - 2026-08-03
 ### What's Changed

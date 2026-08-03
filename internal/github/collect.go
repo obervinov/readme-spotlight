@@ -138,15 +138,20 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 	logs.Infof("collect: user=%s scanning %d–%d", login, createdAt.UTC().Year(), time.Now().UTC().Year())
 
 	agg := map[string]*model.Contribution{}
-	// GraphQL returns null for a node the token cannot resolve — a contribution to
-	// a repository that has since gone private or been deleted. Unmarshalling null
-	// into a struct leaves it zero-valued silently, so without this guard every
-	// such node aggregates under the empty repository name and surfaces as a
-	// nameless block full of blank, unlinked entries.
+	// GraphQL returns null for a node the token cannot resolve. Unmarshalling null
+	// into a struct leaves it zero-valued silently, so without a guard every such
+	// node aggregates under the empty repository name and surfaces as a nameless
+	// block full of blank, unlinked entries.
+	//
+	// The usual cause is token reach rather than a vanished repository: a
+	// fine-grained PAT is scoped to selected repositories, and activity in any
+	// other one — including the user's own — comes back as null. Those own-repo
+	// contributions would have been filtered out anyway, so the nulls are not
+	// necessarily missing data; a classic PAT resolves them.
+	//
 	// Skips are counted per year, activity kind and reason. A bare total says
-	// something was dropped but not what: the breakdown is the only handle on
-	// contributions the token cannot name, since GitHub returns null precisely
-	// because it will not say which repository they belong to.
+	// something was dropped but not what, and the breakdown is the only handle
+	// available, since a null is GitHub declining to name the repository.
 	type skipKey struct {
 		Year   int
 		Kind   string
