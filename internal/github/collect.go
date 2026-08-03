@@ -143,11 +143,11 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 	// node aggregates under the empty repository name and surfaces as a nameless
 	// block full of blank, unlinked entries.
 	//
-	// The usual cause is token reach rather than a vanished repository: a
-	// fine-grained PAT is scoped to selected repositories, and activity in any
-	// other one — including the user's own — comes back as null. Those own-repo
-	// contributions would have been filtered out anyway, so the nulls are not
-	// necessarily missing data; a classic PAT resolves them.
+	// What causes it is not established. Measured against one account: a token
+	// with the repo scope resolves every node in the same collection, including
+	// the ones another token returns as null, and none of those repositories are
+	// private or missing — so it tracks the token's reach rather than the state of
+	// the repository. Treat a null as "this token will not name it", nothing more.
 	//
 	// Skips are counted per year, activity kind and reason. A bare total says
 	// something was dropped but not what, and the breakdown is the only handle

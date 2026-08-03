@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.3 - 2026-08-03
+### What's Changed
+- Withdraw the explanation v0.2.1 and v0.2.2 gave for skipped contributions. Neither "private or deleted repositories" nor "a fine-grained PAT's limited repository scope" survived checking: on the account where this was observed the token is a classic PAT, and a token with the `repo` scope resolves every node the other one returns as null — none of them private, none belonging to a repository that no longer exists. What a null tracks is the reach of the token that asked; the cause beyond that is not established, so the code and the log no longer claim one.
+
 ## v0.2.2 - 2026-08-03
 ### What's Changed
 - Stop the image from overriding its own configuration. `CMD` passed `--addr` and `--db`, and since the `RS_*` variables only supply each flag's default, those flags won: a deployment configured with `RS_DATABASE_DSN=postgres://…` silently kept its state in a container-local SQLite file and lost every configuration change with the next container. The defaults now come from `ENV`, which a caller can override.
