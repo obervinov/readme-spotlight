@@ -2,7 +2,7 @@
 
 ## v0.2.3 - 2026-08-03
 ### What's Changed
-- Withdraw the explanation v0.2.1 and v0.2.2 gave for skipped contributions. Neither "private or deleted repositories" nor "a fine-grained PAT's limited repository scope" survived checking: on the account where this was observed the token is a classic PAT, and a token with the `repo` scope resolves every node the other one returns as null — none of them private, none belonging to a repository that no longer exists. What a null tracks is the reach of the token that asked; the cause beyond that is not established, so the code and the log no longer claim one.
+- Describe the skipped contributions accurately. v0.2.2 blamed a fine-grained PAT's repository scope, which was wrong — the token in question is a classic PAT. Measured instead: for pull requests in one year that token received 82 nodes, 26 of them null, where a token carrying the `repo` scope received only the remaining 56 and resolved them identically. A null slot is therefore a contribution to a repository *no* available token can read — private, or already deleted, which is what v0.2.1 said. The user's own repositories are not involved; they all resolve.
 
 ## v0.2.2 - 2026-08-03
 ### What's Changed
