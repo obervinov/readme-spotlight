@@ -19,13 +19,14 @@ const endpoint = "https://api.github.com/graphql"
 
 // Client talks to the GitHub GraphQL API with a personal access token.
 type Client struct {
-	token string
-	http  *http.Client
+	token    string
+	http     *http.Client
+	endpoint string
 }
 
 // New returns a Client authenticated with the given token.
 func New(token string) *Client {
-	return &Client{token: token, http: &http.Client{Timeout: 30 * time.Second}}
+	return &Client{token: token, http: &http.Client{Timeout: 30 * time.Second}, endpoint: endpoint}
 }
 
 // query executes a GraphQL query and decodes the data into out.
@@ -34,7 +35,7 @@ func (c *Client) query(ctx context.Context, q string, vars map[string]any, out a
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -135,7 +136,17 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 	logs.Infof("collect: user=%s scanning %d–%d", login, createdAt.UTC().Year(), time.Now().UTC().Year())
 
 	agg := map[string]*model.Contribution{}
+	// GraphQL returns null for a node the token cannot resolve — a contribution to
+	// a repository that has since gone private or been deleted. Unmarshalling null
+	// into a struct leaves it zero-valued silently, so without this guard every
+	// such node aggregates under the empty repository name and surfaces as a
+	// nameless block full of blank, unlinked entries.
+	skipped := 0
 	ensure := func(rf repoFields) *model.Contribution {
+		if rf.NameWithOwner == "" {
+			skipped++
+			return nil
+		}
 		cur := agg[rf.NameWithOwner]
 		if cur == nil {
 			cur = &model.Contribution{Repo: rf.NameWithOwner, Owner: rf.Owner.Login, IsOrg: rf.IsInOrganization}
@@ -151,6 +162,29 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 			cur.Description = rf.Description
 		}
 		return cur
+	}
+
+	// add records one linkable contribution. An item without a title or URL is
+	// unrenderable — it would become a bare bullet — so it is dropped before it can
+	// create an aggregate or inflate a count.
+	add := func(rf repoFields, it model.Item) {
+		if it.Title == "" || it.URL == "" {
+			skipped++
+			return
+		}
+		e := ensure(rf)
+		if e == nil {
+			return
+		}
+		switch it.Kind {
+		case "pr":
+			e.PRs++
+		case "issue":
+			e.Issues++
+		case "review":
+			e.Reviews++
+		}
+		e.Items = append(e.Items, it)
 	}
 
 	nowYear := time.Now().UTC().Year()
@@ -208,26 +242,25 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 
 		cc := out.Viewer.C
 		for _, cb := range cc.Commit {
-			ensure(cb.Repository).Commits += cb.Contributions.TotalCount
+			if e := ensure(cb.Repository); e != nil {
+				e.Commits += cb.Contributions.TotalCount
+			}
 		}
 		for _, n := range cc.PR.Nodes {
 			pr := n.PullRequest
-			e := ensure(pr.Repository)
-			e.PRs++
-			e.Items = append(e.Items, model.Item{Kind: "pr", Title: pr.Title, URL: pr.URL, State: pr.State})
+			add(pr.Repository, model.Item{Kind: "pr", Title: pr.Title, URL: pr.URL, State: pr.State})
 		}
 		for _, n := range cc.Issue.Nodes {
 			is := n.Issue
-			e := ensure(is.Repository)
-			e.Issues++
-			e.Items = append(e.Items, model.Item{Kind: "issue", Title: is.Title, URL: is.URL, State: is.State})
+			add(is.Repository, model.Item{Kind: "issue", Title: is.Title, URL: is.URL, State: is.State})
 		}
 		for _, n := range cc.Review.Nodes {
 			pr := n.PullRequestReview.PullRequest
-			e := ensure(pr.Repository)
-			e.Reviews++
-			e.Items = append(e.Items, model.Item{Kind: "review", Title: pr.Title, URL: pr.URL})
+			add(pr.Repository, model.Item{Kind: "review", Title: pr.Title, URL: pr.URL})
 		}
+	}
+	if skipped > 0 {
+		logs.Infof("collect: skipped %d unresolvable contribution(s) (private or deleted repositories)", skipped)
 	}
 
 	out := make([]model.Contribution, 0, len(agg))
