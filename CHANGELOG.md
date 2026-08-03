@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.1 - 2026-08-03
+### What's Changed
+- Drop contributions the GitHub token cannot resolve. A repository that has since gone private or been deleted comes back as JSON `null`, which unmarshalled into a zero-valued struct and aggregated under the empty repository name — rendering as a nameless `<details>` block whose entries were bare, unlinked bullets. Such nodes are now skipped, without inflating counts, and the number dropped is logged.
+
 ## v0.2.0 - 2026-08-03
 ### What's Changed
 - Add a machine API for keeping the section content in sync with an external source (e.g. a CV) without using the UI: `GET`/`PATCH /api/content` and `POST /api/publish`. Disabled unless `RS_API_TOKEN` is set.
