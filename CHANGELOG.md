@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.2 - 2026-08-04
+### What's Changed
+- Stop the image from overriding its own configuration. `CMD` passed `--addr` and `--db`, and since the `RS_*` variables only supply each flag's default, those flags won: a deployment configured with `RS_DATABASE_DSN=postgres://…` silently kept its state in a container-local SQLite file and lost every configuration change with the next container. The defaults now come from `ENV`, which a caller can override.
+- Report which contributions were skipped, broken down by year, activity kind and whether it was the repository or the item that the token could not see. A bare total said something had been dropped but gave no handle on what.
+
 ## v0.2.1 - 2026-08-03
 ### What's Changed
 - Drop contributions the GitHub token cannot resolve. A repository that has since gone private or been deleted comes back as JSON `null`, which unmarshalled into a zero-valued struct and aggregated under the empty repository name — rendering as a nameless `<details>` block whose entries were bare, unlinked bullets. Such nodes are now skipped, without inflating counts, and the number dropped is logged.

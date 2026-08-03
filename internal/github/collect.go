@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/obervinov/readme-spotlight/internal/logs"
@@ -141,10 +143,26 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 	// into a struct leaves it zero-valued silently, so without this guard every
 	// such node aggregates under the empty repository name and surfaces as a
 	// nameless block full of blank, unlinked entries.
-	skipped := 0
-	ensure := func(rf repoFields) *model.Contribution {
+	// Skips are counted per year, activity kind and reason. A bare total says
+	// something was dropped but not what: the breakdown is the only handle on
+	// contributions the token cannot name, since GitHub returns null precisely
+	// because it will not say which repository they belong to.
+	type skipKey struct {
+		Year   int
+		Kind   string
+		Reason string
+	}
+	skips := map[skipKey]int{}
+	year := 0 // set at the top of each year's iteration, read by the closures below
+
+	const (
+		reasonRepo = "repository not visible to the token"
+		reasonItem = "item not visible to the token"
+	)
+
+	ensure := func(rf repoFields, kind string) *model.Contribution {
 		if rf.NameWithOwner == "" {
-			skipped++
+			skips[skipKey{year, kind, reasonRepo}]++
 			return nil
 		}
 		cur := agg[rf.NameWithOwner]
@@ -169,10 +187,16 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 	// create an aggregate or inflate a count.
 	add := func(rf repoFields, it model.Item) {
 		if it.Title == "" || it.URL == "" {
-			skipped++
+			// A wholly null node has neither a repository nor a title, so attribute
+			// it to the repository — that is the fact worth reporting.
+			reason := reasonItem
+			if rf.NameWithOwner == "" {
+				reason = reasonRepo
+			}
+			skips[skipKey{year, it.Kind, reason}]++
 			return
 		}
-		e := ensure(rf)
+		e := ensure(rf, it.Kind)
 		if e == nil {
 			return
 		}
@@ -189,6 +213,7 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 
 	nowYear := time.Now().UTC().Year()
 	for y := createdAt.UTC().Year(); y <= nowYear; y++ {
+		year = y
 		from := time.Date(y, time.January, 1, 0, 0, 0, 0, time.UTC)
 		to := time.Date(y, time.December, 31, 23, 59, 59, 0, time.UTC)
 
@@ -242,7 +267,7 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 
 		cc := out.Viewer.C
 		for _, cb := range cc.Commit {
-			if e := ensure(cb.Repository); e != nil {
+			if e := ensure(cb.Repository, "commit"); e != nil {
 				e.Commits += cb.Contributions.TotalCount
 			}
 		}
@@ -259,8 +284,15 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 			add(pr.Repository, model.Item{Kind: "review", Title: pr.Title, URL: pr.URL})
 		}
 	}
-	if skipped > 0 {
-		logs.Infof("collect: skipped %d unresolvable contribution(s) (private or deleted repositories)", skipped)
+	if len(skips) > 0 {
+		total := 0
+		parts := make([]string, 0, len(skips))
+		for k, n := range skips {
+			total += n
+			parts = append(parts, fmt.Sprintf("%d %s in %d (%s)", n, k.Kind, k.Year, k.Reason))
+		}
+		sort.Strings(parts)
+		logs.Infof("collect: skipped %d unresolvable contribution(s): %s", total, strings.Join(parts, "; "))
 	}
 
 	out := make([]model.Contribution, 0, len(agg))

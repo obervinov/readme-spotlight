@@ -17,4 +17,11 @@ COPY --from=build /out/readme-spotlight /usr/local/bin/readme-spotlight
 USER app
 EXPOSE 8080
 VOLUME /data
-CMD ["readme-spotlight", "--addr", ":8080", "--db", "sqlite:/data/spotlight.db"]
+# Defaults come from the environment, never from flags. The RS_* variables only
+# supply each flag's default value, so a flag baked into CMD would win over them
+# — a deployment asking for PostgreSQL via RS_DATABASE_DSN would silently keep
+# writing to a container-local SQLite file and lose its data with every new
+# container. As environment variables these stay overridable by the caller.
+ENV RS_ADDR=":8080" \
+    RS_DATABASE_DSN="sqlite:/data/spotlight.db"
+CMD ["readme-spotlight"]

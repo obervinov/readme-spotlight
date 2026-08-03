@@ -157,12 +157,19 @@ it, and treat the token like the GitHub token it fronts.
 
 ## Storage
 
-SQLite by default (pure-Go, no CGO) at `./data/spotlight.db`. Point `--db` (or
-`RS_DATABASE_DSN`) at PostgreSQL to use that instead:
+SQLite by default (pure-Go, no CGO) at `./data/spotlight.db`, or `/data/spotlight.db`
+in the container. Point `--db` (or `RS_DATABASE_DSN`) at PostgreSQL to use that
+instead:
 
 ```sh
 go run ./cmd/readme-spotlight --db 'postgres://user:pass@host:5432/readme_spotlight?sslmode=disable'
 ```
+
+Every `RS_*` variable supplies the **default** for its flag, so a flag on the
+command line wins. Configure containers through the environment and leave the
+command alone — a `--db` in the command line would quietly ignore
+`RS_DATABASE_DSN` and keep writing to the container's own filesystem, which is
+gone with the next container.
 
 ## Deployment
 
