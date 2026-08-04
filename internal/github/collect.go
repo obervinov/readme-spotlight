@@ -143,11 +143,13 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 	// node aggregates under the empty repository name and surfaces as a nameless
 	// block full of blank, unlinked entries.
 	//
-	// The usual cause is token reach rather than a vanished repository: a
-	// fine-grained PAT is scoped to selected repositories, and activity in any
-	// other one — including the user's own — comes back as null. Those own-repo
-	// contributions would have been filtered out anyway, so the nulls are not
-	// necessarily missing data; a classic PAT resolves them.
+	// These are contributions GitHub counts but will not describe. Measured on one
+	// account, for pull requests in a single year: this token received 82 nodes, 26
+	// of them null, while a token carrying the repo scope received only the other
+	// 56 — the same 56, resolved identically. So the null slots are not
+	// repositories one token can name and another cannot; they belong to
+	// repositories neither can read, private or already gone. The user's own
+	// repositories are not among them: those all resolve.
 	//
 	// Skips are counted per year, activity kind and reason. A bare total says
 	// something was dropped but not what, and the breakdown is the only handle
