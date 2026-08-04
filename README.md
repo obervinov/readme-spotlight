@@ -187,8 +187,8 @@ every release.
 
 ### Kubernetes
 
-Put the GitHub token in a `Secret`, then apply a `Deployment` + `Service`. This
-example uses PostgreSQL, so no volume is needed:
+Put everything sensitive in a `Secret`, then apply a `Deployment` + `Service`.
+This example uses PostgreSQL, so no volume is needed:
 
 ```yaml
 apiVersion: v1
@@ -198,6 +198,9 @@ metadata:
 type: Opaque
 stringData:
   GITHUB_TOKEN: <your token>
+  # The DSN carries the database password, so it belongs here rather than in the
+  # Deployment: env values are readable in any dump of the object.
+  RS_DATABASE_DSN: postgres://user:pass@postgres:5432/readme_spotlight?sslmode=disable
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -221,8 +224,11 @@ spec:
               valueFrom:
                 secretKeyRef: { name: readme-spotlight, key: GITHUB_TOKEN }
             - name: RS_DATABASE_DSN
-              value: postgres://user:pass@postgres:5432/readme_spotlight?sslmode=disable
-            # Guard the UI when exposing it (see Authentication):
+              valueFrom:
+                secretKeyRef: { name: readme-spotlight, key: RS_DATABASE_DSN }
+            # Guard the UI when exposing it (see Authentication). RS_SESSION_SECRET
+            # and RS_OIDC_CLIENT_SECRET belong in the Secret above, alongside
+            # RS_API_TOKEN if the machine API is enabled:
             # - name: RS_AUTH_MODE
             #   value: oidc
           readinessProbe:
