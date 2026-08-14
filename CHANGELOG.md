@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.1 - 2026-08-14
+### What's Changed
+- Rename the second contribution group from `Issues reported` to `Issues & open PRs`. The group holds everything without merged code, which includes pull requests that are still open or were rejected — three repositories in the author's own section sit there with one pull request and no issues at all, under a heading claiming otherwise. The name now describes what the group contains rather than only its largest part.
+- Accept the XML-escaped form when asserting group headings in tests. The SVG card escapes its headings, so a title carrying an ampersand reaches the card as `&amp;` and the previous exact-match assertion failed on it — a gap that only surfaced once a heading contained a character worth escaping.
+
 ## v0.3.0 - 2026-08-14
 ### What's Changed
 - Write one commit per run instead of one per file. Publishing went through the contents API, which commits each path separately, so every run left two commits in the target repository — one for the README, one for the contributions asset. Fifty of the last fifty-four commits in the profile repository were these refreshes, twice a day on several days, which makes a contribution graph read as a scheduler rather than as work. Commits now go through the git data API as a single tree, commit and ref update, with force disabled so a branch that moved underneath the run fails rather than being clobbered.

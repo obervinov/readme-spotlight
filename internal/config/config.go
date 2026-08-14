@@ -41,7 +41,7 @@ type Config struct {
 	SortBy  string         `json:"sort_by"` // "stars" or "total"
 	Limit   int            `json:"limit"`   // max rows, 0 = all
 
-	// GroupMerged renders "Merged code" and "Issues reported" as two groups
+	// GroupMerged renders "Merged code" and "Issues & open PRs" as two groups
 	// instead of one flat list. Off by default; see render.Options.
 	GroupMerged bool `json:"group_merged"`
 }
