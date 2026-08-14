@@ -151,8 +151,22 @@ func TestFormatsRenderBothGroups(t *testing.T) {
 			out := render(opt)
 			for _, title := range []string{GroupMergedTitle, GroupIssuesTitle} {
 				// The SVG card sets its headings in the same upper case as its
-				// column headers.
-				if !strings.Contains(out, title) && !strings.Contains(out, strings.ToUpper(title)) {
+				// column headers, and escapes them as XML — a title carrying an
+				// ampersand reaches the card as "&amp;".
+				variants := []string{
+					title,
+					strings.ToUpper(title),
+					escXML(title),
+					escXML(strings.ToUpper(title)),
+				}
+				found := false
+				for _, v := range variants {
+					if strings.Contains(out, v) {
+						found = true
+						break
+					}
+				}
+				if !found {
 					t.Errorf("%s output is missing the %q group heading", name, title)
 				}
 			}

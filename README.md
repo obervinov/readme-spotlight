@@ -45,7 +45,7 @@ Rendered, in order, into the region between `<!--SPOTLIGHT:START-->` and
 4. **Technology & Tools** — your stack, grouped by domain.
 5. **Open-Source Contributions** — external repos with commit/PR/issue counts,
    as a styled SVG card, an expandable linked list, or both (hybrid). Optionally
-   split into **Merged code** and **Issues reported** (see
+   split into **Merged code** and **Issues & open PRs** (see
    [Grouping](#grouping-merged-code-vs-reported-issues)).
 
 Each section is configurable and can be toggled off. All state is stored in the
@@ -94,7 +94,7 @@ the contributions render as two groups instead of one list:
 
 - **Merged code** — a commit landed on the default branch, or a pull request was
   merged.
-- **Issues reported** — everything else: issues, reviews, and pull requests that
+- **Issues & open PRs** — everything else: issues, reviews, and pull requests that
   were closed unmerged or are still open.
 
 Repositories are sorted by stars within each group. The split is a label, not a

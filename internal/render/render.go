@@ -62,7 +62,7 @@ type Options struct {
 // filter: every repository appears in exactly one of the two groups.
 const (
 	GroupMergedTitle = "Merged code"
-	GroupIssuesTitle = "Issues reported"
+	GroupIssuesTitle = "Issues & open PRs"
 )
 
 // group is one rendered section of the list: a heading — empty when the list is
