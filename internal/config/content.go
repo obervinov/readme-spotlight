@@ -23,10 +23,11 @@ type Content struct {
 	Focus       render.FocusConfig       `json:"focus"`
 	Tech        render.TechConfig        `json:"tech"`
 
-	Title  string `json:"title"`
-	Format string `json:"format"`
-	SortBy string `json:"sort_by"`
-	Limit  int    `json:"limit"`
+	Title       string `json:"title"`
+	Format      string `json:"format"`
+	SortBy      string `json:"sort_by"`
+	Limit       int    `json:"limit"`
+	GroupMerged bool   `json:"group_merged"`
 }
 
 // ContentOf projects a stored configuration onto the content subset.
@@ -40,6 +41,7 @@ func ContentOf(c Config) Content {
 		Format:      c.Format,
 		SortBy:      c.SortBy,
 		Limit:       c.Limit,
+		GroupMerged: c.GroupMerged,
 	}
 }
 
@@ -52,10 +54,11 @@ type ContentPatch struct {
 	Focus       *render.FocusConfig       `json:"focus,omitempty"`
 	Tech        *render.TechConfig        `json:"tech,omitempty"`
 
-	Title  *string `json:"title,omitempty"`
-	Format *string `json:"format,omitempty"`
-	SortBy *string `json:"sort_by,omitempty"`
-	Limit  *int    `json:"limit,omitempty"`
+	Title       *string `json:"title,omitempty"`
+	Format      *string `json:"format,omitempty"`
+	SortBy      *string `json:"sort_by,omitempty"`
+	Limit       *int    `json:"limit,omitempty"`
+	GroupMerged *bool   `json:"group_merged,omitempty"`
 }
 
 // Field length and cardinality limits. They bound how much text a caller can
@@ -132,6 +135,12 @@ func (p ContentPatch) Apply(cfg Config) (Config, []string, error) {
 		}
 		cfg.Limit = *p.Limit
 		changed = append(changed, "limit")
+	}
+	if p.GroupMerged != nil {
+		// A bool has nothing to validate: both values are legal, and the flag
+		// only relabels a list the renderer already produces.
+		cfg.GroupMerged = *p.GroupMerged
+		changed = append(changed, "group_merged")
 	}
 
 	if len(changed) == 0 {

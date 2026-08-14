@@ -29,7 +29,7 @@ func (c *Client) rest(ctx context.Context, method, path string, body, out any) e
 		}
 		rdr = bytes.NewReader(b)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, apiBase+path, rdr)
+	req, err := http.NewRequestWithContext(ctx, method, c.restBase+path, rdr)
 	if err != nil {
 		return err
 	}
@@ -98,20 +98,9 @@ func (c *Client) GetFileMaybe(ctx context.Context, owner, repo, path, ref string
 	return f, true, nil
 }
 
-// PutFile creates or updates a file on branch. Pass the existing blob sha when
-// updating; leave it empty to create.
-func (c *Client) PutFile(ctx context.Context, owner, repo, path, branch, message, content, sha string) error {
-	body := map[string]any{
-		"message": message,
-		"content": base64.StdEncoding.EncodeToString([]byte(content)),
-		"branch":  branch,
-	}
-	if sha != "" {
-		body["sha"] = sha
-	}
-	p := fmt.Sprintf("/repos/%s/%s/contents/%s", owner, repo, path)
-	return c.rest(ctx, http.MethodPut, p, body, nil)
-}
+// Files are written through CommitFiles (git data API), not the contents API:
+// the latter commits one path at a time, which is what used to leave a separate
+// commit per file in the target repository's history.
 
 // BranchSHA returns the commit SHA that branch points to.
 func (c *Client) BranchSHA(ctx context.Context, owner, repo, branch string) (string, error) {

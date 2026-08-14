@@ -51,6 +51,58 @@ type Options struct {
 	Columns Columns
 	SortBy  string // "stars" (default) or "total"
 	Limit   int    // 0 = no limit
+
+	// GroupMerged splits the list into two labelled groups — repositories where
+	// code landed, and everything else — instead of one flat list. Off by
+	// default, so an existing configuration renders exactly as before.
+	GroupMerged bool
+}
+
+// Group titles used when GroupMerged is on. The split is a label, never a
+// filter: every repository appears in exactly one of the two groups.
+const (
+	GroupMergedTitle = "Merged code"
+	GroupIssuesTitle = "Issues reported"
+)
+
+// group is one rendered section of the list: a heading — empty when the list is
+// not grouped — and the repositories under it.
+type group struct {
+	Title string
+	Items []model.Contribution
+}
+
+// groups splits, sorts and limits contributions per the options. Without
+// GroupMerged the result is a single untitled group holding the whole list,
+// which is what every format rendered before grouping existed.
+func groups(contribs []model.Contribution, opt Options) []group {
+	if !opt.GroupMerged {
+		return []group{{Items: prepare(contribs, opt)}}
+	}
+
+	var landed, filed []model.Contribution
+	for _, c := range contribs {
+		if c.HasMergedCode() {
+			landed = append(landed, c)
+			continue
+		}
+		filed = append(filed, c)
+	}
+
+	// Inside a group the only ranking question left is how visible the project
+	// is, so stars order both groups whatever SortBy says. Limit keeps its
+	// meaning of "at most this many rows in a list" and applies to each group.
+	byStars := opt
+	byStars.SortBy = "stars"
+
+	out := make([]group, 0, 2)
+	for _, g := range []group{{GroupMergedTitle, landed}, {GroupIssuesTitle, filed}} {
+		if len(g.Items) == 0 {
+			continue // a heading over nothing
+		}
+		out = append(out, group{Title: g.Title, Items: prepare(g.Items, byStars)})
+	}
+	return out
 }
 
 // Render returns just the README block for the configured format. Use

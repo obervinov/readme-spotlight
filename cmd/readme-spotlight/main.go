@@ -33,6 +33,7 @@ func main() {
 		dsn      = flag.String("db", envOr("RS_DATABASE_DSN", "sqlite:./data/spotlight.db"), "database DSN, sqlite:PATH or postgres://... (env RS_DATABASE_DSN)")
 		printOut = flag.Bool("print", false, "collect and print the block to stdout, then exit")
 		format   = flag.String("format", "table", "block format for --print: table | details")
+		grouped  = flag.Bool("group-merged", false, "for --print: split the list into merged code and reported issues")
 	)
 	flag.Parse()
 
@@ -49,6 +50,7 @@ func main() {
 		}
 		out := render.RenderOutput(contribs, render.Options{
 			Title: "Open-Source Contributions", Format: *format, Columns: render.DefaultColumns(), SortBy: "stars",
+			GroupMerged: *grouped,
 		})
 		for path, content := range out.Assets {
 			if err := os.WriteFile(path, []byte(content), 0o644); err != nil {

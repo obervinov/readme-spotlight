@@ -21,6 +21,12 @@ type Config struct {
 	PublishMode  string `json:"publish_mode"`  // "pr" or "commit"
 	PRBranch     string `json:"pr_branch"`     // head branch used in "pr" mode
 
+	// SkipStarOnlyChanges suppresses a publish whose only difference is other
+	// people's star counts drifting. Off by default: the plain guard already
+	// skips byte-identical output, and this one deliberately lets a real
+	// difference through unpublished until something else changes too.
+	SkipStarOnlyChanges bool `json:"skip_star_only_changes"`
+
 	// Sections are rendered into the managed region in a fixed order:
 	// banner, focus, then contributions. (More sections land here as they ship.)
 	Banner      render.BannerConfig      `json:"banner"`
@@ -34,6 +40,10 @@ type Config struct {
 	Columns render.Columns `json:"columns"` // only used by the table format
 	SortBy  string         `json:"sort_by"` // "stars" or "total"
 	Limit   int            `json:"limit"`   // max rows, 0 = all
+
+	// GroupMerged renders "Merged code" and "Issues reported" as two groups
+	// instead of one flat list. Off by default; see render.Options.
+	GroupMerged bool `json:"group_merged"`
 }
 
 // Default returns a ready-to-run configuration with sensible values.
@@ -43,20 +53,23 @@ func Default() Config {
 		ReadmePath:   "README.md",
 		MarkerStart:  "<!--SPOTLIGHT:START-->",
 		MarkerEnd:    "<!--SPOTLIGHT:END-->",
-		Schedule:     "0 6 * * *", // daily at 06:00
+		Schedule:     "0 6 * * 1", // weekly, Monday at 06:00
 		PublishMode:  "pr",
 		PRBranch:     "readme-spotlight/update",
+
+		SkipStarOnlyChanges: false,
 
 		Banner:      render.DefaultBanner(),
 		Positioning: render.DefaultPositioning(),
 		Focus:       render.DefaultFocus(),
 		Tech:        render.DefaultTech(),
 
-		Title:   "Open-Source Contributions",
-		Format:  render.FormatHybrid,
-		Columns: render.DefaultColumns(),
-		SortBy:  "stars",
-		Limit:   0,
+		Title:       "Open-Source Contributions",
+		Format:      render.FormatHybrid,
+		Columns:     render.DefaultColumns(),
+		SortBy:      "stars",
+		Limit:       0,
+		GroupMerged: false,
 	}
 }
 
@@ -130,10 +143,11 @@ func ParseTechGroups(text string) []render.TechGroup {
 // RenderOptions projects the config onto the renderer's option struct.
 func (c Config) RenderOptions() render.Options {
 	return render.Options{
-		Title:   c.Title,
-		Format:  c.Format,
-		Columns: c.Columns,
-		SortBy:  c.SortBy,
-		Limit:   c.Limit,
+		Title:       c.Title,
+		Format:      c.Format,
+		Columns:     c.Columns,
+		SortBy:      c.SortBy,
+		Limit:       c.Limit,
+		GroupMerged: c.GroupMerged,
 	}
 }

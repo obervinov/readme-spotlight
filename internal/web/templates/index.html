@@ -147,6 +147,12 @@
         </div>
         <div><label>Limit (0 = all)</label><input type="number" name="limit" min="0" value="{{.Config.Limit}}"></div>
       </div>
+      <label style="margin-top:.8rem"><input type="checkbox" name="group_merged" {{if .Config.GroupMerged}}checked{{end}}> Group merged code separately from filed issues</label>
+      <p style="color:#888;font-size:.8rem;margin:.3rem 0 0">
+        Two groups — <em>Merged code</em> (a commit or a merged pull request landed) and
+        <em>Issues reported</em> (everything else) — sorted by stars within each. Nothing is
+        hidden: every repository appears in one of the two.
+      </p>
     </fieldset>
 
     <fieldset>
@@ -162,7 +168,13 @@
         <div><label>PR head branch</label><input type="text" name="pr_branch" value="{{.Config.PRBranch}}"></div>
       </div>
       <label>Schedule (cron, empty = manual only)</label>
-      <input type="text" name="schedule" value="{{.Config.Schedule}}" placeholder="0 6 * * *">
+      <input type="text" name="schedule" value="{{.Config.Schedule}}" placeholder="0 6 * * 1">
+      <label style="margin-top:.8rem"><input type="checkbox" name="skip_star_only_changes" {{if .Config.SkipStarOnlyChanges}}checked{{end}}> Skip a publish when only star counts moved</label>
+      <p style="color:#888;font-size:.8rem;margin:.3rem 0 0">
+        A run that produces identical output never commits. With this on, a run whose only
+        difference is other people's stargazers drifting (40★ → 41★) does not commit either —
+        those numbers then refresh with the next real change.
+      </p>
     </fieldset>
 
     <div class="savebar">

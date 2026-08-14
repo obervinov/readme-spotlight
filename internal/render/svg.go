@@ -17,7 +17,25 @@ const (
 // cannot — at the cost of not being clickable (the hybrid format pairs it with
 // a clickable list).
 func SVG(contribs []model.Contribution, opt Options) string {
-	items := prepare(contribs, opt)
+	// Rows are laid out flat: a group heading occupies a row of its own, so the
+	// card's height only ever depends on how many rows there are.
+	type row struct {
+		heading string
+		c       model.Contribution
+	}
+	var (
+		rows  []row
+		items []model.Contribution
+	)
+	for _, g := range groups(contribs, opt) {
+		if g.Title != "" {
+			rows = append(rows, row{heading: g.Title})
+		}
+		for _, c := range g.Items {
+			rows = append(rows, row{c: c})
+			items = append(items, c)
+		}
+	}
 
 	// Right-anchored x positions for the numeric columns.
 	const (
@@ -34,7 +52,7 @@ func SVG(contribs []model.Contribution, opt Options) string {
 		headY     = 92
 		firstRowY = headY + 22
 	)
-	height := firstRowY + len(items)*svgRowH + 8
+	height := firstRowY + len(rows)*svgRowH + 8
 
 	total := 0
 	for _, it := range items {
@@ -78,12 +96,20 @@ func SVG(contribs []model.Contribution, opt Options) string {
 	fmt.Fprintf(&b, `<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="#21262d"/>`, xRepo, headY+8, xTotal, headY+8)
 
 	// Rows.
-	for i, it := range items {
+	dataRow := 0 // zebra striping counts repositories, not headings
+	for i, r := range rows {
 		y := firstRowY + i*svgRowH
 		baseline := y + 17
-		if i%2 == 1 {
+		if r.heading != "" {
+			fmt.Fprintf(&b, `<text x="%d" y="%d" class="h">%s</text>`, xRepo, baseline, escXML(strings.ToUpper(r.heading)))
+			dataRow = 0
+			continue
+		}
+		it := r.c
+		if dataRow%2 == 1 {
 			fmt.Fprintf(&b, `<rect x="12" y="%d" width="%d" height="%d" rx="5" fill="#ffffff08"/>`, y, svgW-24, svgRowH)
 		}
+		dataRow++
 		fmt.Fprintf(&b, `<text x="%d" y="%d" class="r">%s</text>`, xRepo, baseline, escXML(truncate(it.Repo, 42)))
 		fmt.Fprintf(&b, `<text x="%d" y="%d" class="star" text-anchor="end">★ %s</text>`, xStars, baseline, formatStars(it.Stars))
 		num := func(x, v int) {

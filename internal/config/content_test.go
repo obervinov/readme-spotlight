@@ -84,6 +84,26 @@ func TestApplyAcceptsValidContent(t *testing.T) {
 	}
 }
 
+func TestApplyGroupMerged(t *testing.T) {
+	cfg := Default()
+	if cfg.GroupMerged {
+		t.Fatal("grouping must be off by default")
+	}
+	got, changed, err := ContentPatch{GroupMerged: ptr(true)}.Apply(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(changed) != 1 || changed[0] != "group_merged" {
+		t.Fatalf("changed = %v, want [group_merged]", changed)
+	}
+	if !got.GroupMerged {
+		t.Fatal("group_merged was not applied")
+	}
+	if got.SkipStarOnlyChanges != cfg.SkipStarOnlyChanges {
+		t.Fatal("a content patch must not reach a publishing field")
+	}
+}
+
 func TestContentOfProjectsSubset(t *testing.T) {
 	cfg := Default()
 	cfg.Title = "Open-Source Contributions"

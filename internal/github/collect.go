@@ -19,16 +19,23 @@ import (
 
 const endpoint = "https://api.github.com/graphql"
 
-// Client talks to the GitHub GraphQL API with a personal access token.
+// Client talks to the GitHub GraphQL and REST APIs with a personal access
+// token. The two base URLs are fields so tests can point them at a stub.
 type Client struct {
 	token    string
 	http     *http.Client
-	endpoint string
+	endpoint string // GraphQL
+	restBase string // REST
 }
 
 // New returns a Client authenticated with the given token.
 func New(token string) *Client {
-	return &Client{token: token, http: &http.Client{Timeout: 30 * time.Second}, endpoint: endpoint}
+	return &Client{
+		token:    token,
+		http:     &http.Client{Timeout: 30 * time.Second},
+		endpoint: endpoint,
+		restBase: apiBase,
+	}
 }
 
 // query executes a GraphQL query and decodes the data into out.
@@ -126,6 +133,69 @@ fragment repoFields on Repository {
   description
   primaryLanguage { name }
 }`
+
+// mergedPRQuery counts the pull requests the viewer authored that actually
+// landed. The per-year contributions query cannot answer this on its own: its
+// aggregate pull request count mixes merged work with pull requests that were
+// closed unmerged or are still open, and once they are only a number the three
+// are indistinguishable.
+//
+// Search is paginated at 100 nodes per request, so a normal account costs a
+// single call on top of the per-year walk.
+const mergedPRQuery = `
+query($q:String!, $after:String) {
+  search(query:$q, type:ISSUE, first:100, after:$after) {
+    nodes { ... on PullRequest { repository { nameWithOwner } } }
+    pageInfo { hasNextPage endCursor }
+  }
+}`
+
+// mergedPRPageCap bounds the search walk. GitHub's search itself stops at 1000
+// results, so this only guards against a pagination loop that never terminates.
+const mergedPRPageCap = 10
+
+// MergedPRsByRepo returns how many merged pull requests login authored, keyed by
+// "owner/name".
+func (c *Client) MergedPRsByRepo(ctx context.Context, login string) (map[string]int, error) {
+	counts := map[string]int{}
+	cursor := ""
+	for page := 0; page < mergedPRPageCap; page++ {
+		var out struct {
+			Search struct {
+				Nodes []struct {
+					Repository struct {
+						NameWithOwner string `json:"nameWithOwner"`
+					} `json:"repository"`
+				} `json:"nodes"`
+				PageInfo struct {
+					HasNextPage bool   `json:"hasNextPage"`
+					EndCursor   string `json:"endCursor"`
+				} `json:"pageInfo"`
+			} `json:"search"`
+		}
+		vars := map[string]any{"q": "is:pr is:merged author:" + login}
+		if cursor != "" {
+			vars["after"] = cursor
+		}
+		if err := c.query(ctx, mergedPRQuery, vars, &out); err != nil {
+			return nil, fmt.Errorf("collect merged pull requests: %w", err)
+		}
+		for _, n := range out.Search.Nodes {
+			// Same unresolvable node as in the per-year walk: a repository the
+			// token cannot name, so there is nothing to attribute the merge to.
+			if n.Repository.NameWithOwner == "" {
+				continue
+			}
+			counts[n.Repository.NameWithOwner]++
+		}
+		if !out.Search.PageInfo.HasNextPage {
+			return counts, nil
+		}
+		cursor = out.Search.PageInfo.EndCursor
+	}
+	logs.Infof("collect: merged pull request walk stopped at the %d-page cap", mergedPRPageCap)
+	return counts, nil
+}
 
 // CollectExternal walks the viewer's contributions year-by-year from account
 // creation to now, aggregates them per repository, and returns only those
@@ -302,6 +372,22 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 		logs.Infof("collect: skipped %d unresolvable contribution(s): %s", total, strings.Join(parts, "; "))
 	}
 
+	// Which of those pull requests landed. Only repositories the year walk
+	// already found are annotated: a merge the walk did not see belongs to a
+	// repository there is no aggregate for — the viewer's own, or one whose
+	// nodes were unresolvable — and inventing an entry from a bare count would
+	// render as a repository with no items.
+	merged, err := c.MergedPRsByRepo(ctx, login)
+	if err != nil {
+		return nil, err
+	}
+	for repo, n := range merged {
+		if e := agg[repo]; e != nil {
+			e.PRsMerged = n
+		}
+	}
+	logs.Infof("collect: %d merged pull request(s) across %d repositories", sumCounts(merged), len(merged))
+
 	out := make([]model.Contribution, 0, len(agg))
 	for _, v := range agg {
 		if v.Owner == login {
@@ -314,4 +400,12 @@ func (c *Client) CollectExternal(ctx context.Context) ([]model.Contribution, err
 	}
 	logs.Infof("collect: %d external repositories", len(out))
 	return out, nil
+}
+
+func sumCounts(m map[string]int) int {
+	total := 0
+	for _, n := range m {
+		total += n
+	}
+	return total
 }
