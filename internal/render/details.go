@@ -12,22 +12,25 @@ import (
 // issues and reviews as clickable links. GitHub renders <details>/<summary> and
 // the Markdown inside them in profile READMEs.
 func Details(contribs []model.Contribution, opt Options) string {
-	items := prepare(contribs, opt)
-
 	var b strings.Builder
 	if opt.Title != "" {
 		fmt.Fprintf(&b, "### %s\n\n", opt.Title)
 	}
 
-	for _, it := range items {
-		fmt.Fprintf(&b, "<details>\n<summary>%s</summary>\n\n", summaryLine(it))
-		for _, item := range it.Items {
-			fmt.Fprintf(&b, "- %s [%s](%s)\n", itemLabel(item), escapeText(item.Title), item.URL)
+	for _, g := range groups(contribs, opt) {
+		if g.Title != "" {
+			fmt.Fprintf(&b, "#### %s\n\n", g.Title)
 		}
-		if it.Commits > 0 && it.CommitsURL != "" {
-			fmt.Fprintf(&b, "- 📝 [%d commit%s](%s)\n", it.Commits, plural(it.Commits), it.CommitsURL)
+		for _, it := range g.Items {
+			fmt.Fprintf(&b, "<details>\n<summary>%s</summary>\n\n", summaryLine(it))
+			for _, item := range it.Items {
+				fmt.Fprintf(&b, "- %s [%s](%s)\n", itemLabel(item), escapeText(item.Title), item.URL)
+			}
+			if it.Commits > 0 && it.CommitsURL != "" {
+				fmt.Fprintf(&b, "- 📝 [%d commit%s](%s)\n", it.Commits, plural(it.Commits), it.CommitsURL)
+			}
+			b.WriteString("</details>\n\n")
 		}
-		b.WriteString("</details>\n\n")
 	}
 	return strings.TrimRight(b.String(), "\n") + "\n"
 }

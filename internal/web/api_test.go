@@ -116,12 +116,14 @@ func TestGetContentReturnsOnlyContentFields(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	for _, key := range []string{"banner", "positioning", "focus", "tech", "title", "format", "sort_by", "limit"} {
+	for _, key := range []string{"banner", "positioning", "focus", "tech", "title", "format", "sort_by", "limit", "group_merged"} {
 		if _, ok := body[key]; !ok {
 			t.Fatalf("response is missing %q", key)
 		}
 	}
-	for _, key := range []string{"target_repo", "target_branch", "readme_path", "publish_mode", "pr_branch", "schedule", "marker_start", "marker_end"} {
+	// skip_star_only_changes decides whether a run commits at all, so it belongs
+	// with the publishing fields the API cannot reach.
+	for _, key := range []string{"target_repo", "target_branch", "readme_path", "publish_mode", "pr_branch", "schedule", "marker_start", "marker_end", "skip_star_only_changes"} {
 		if _, ok := body[key]; ok {
 			t.Fatalf("response exposes %q, which is not part of the content subset", key)
 		}

@@ -284,9 +284,11 @@ func (s *Server) saveConfig(w http.ResponseWriter, r *http.Request) {
 	cfg.Title = orDefault(r.FormValue("title"), cfg.Title)
 	cfg.Format = orDefault(r.FormValue("format"), cfg.Format)
 	cfg.SortBy = orDefault(r.FormValue("sort_by"), cfg.SortBy)
+	cfg.GroupMerged = r.FormValue("group_merged") != ""
 	cfg.Schedule = strings.TrimSpace(r.FormValue("schedule"))
 	cfg.PublishMode = orDefault(r.FormValue("publish_mode"), cfg.PublishMode)
 	cfg.PRBranch = orDefault(r.FormValue("pr_branch"), cfg.PRBranch)
+	cfg.SkipStarOnlyChanges = r.FormValue("skip_star_only_changes") != ""
 	if n, err := strconv.Atoi(r.FormValue("limit")); err == nil {
 		cfg.Limit = n
 	}

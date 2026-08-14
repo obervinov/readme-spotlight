@@ -10,7 +10,6 @@ import (
 // Markdown renders the contributions as a heading plus a Markdown table. It
 // returns only the block body; marker comments are added by the publisher.
 func Markdown(contribs []model.Contribution, opt Options) string {
-	items := prepare(contribs, opt)
 	c := opt.Columns
 
 	var head, sep []string
@@ -34,33 +33,43 @@ func Markdown(contribs []model.Contribution, opt Options) string {
 	if opt.Title != "" {
 		fmt.Fprintf(&b, "### %s\n\n", opt.Title)
 	}
-	fmt.Fprintf(&b, "| %s |\n", strings.Join(head, " | "))
-	fmt.Fprintf(&b, "| %s |\n", strings.Join(sep, " | "))
 
-	for _, it := range items {
-		cells := []string{fmt.Sprintf("[%s](https://github.com/%s)", it.Repo, it.Repo)}
-		if c.Language {
-			cells = append(cells, it.Language)
+	// One table per group; ungrouped output is a single table, as before.
+	for i, g := range groups(contribs, opt) {
+		if g.Title != "" {
+			if i > 0 {
+				b.WriteString("\n")
+			}
+			fmt.Fprintf(&b, "#### %s\n\n", g.Title)
 		}
-		if c.Stars {
-			cells = append(cells, formatStars(it.Stars))
+		fmt.Fprintf(&b, "| %s |\n", strings.Join(head, " | "))
+		fmt.Fprintf(&b, "| %s |\n", strings.Join(sep, " | "))
+
+		for _, it := range g.Items {
+			cells := []string{fmt.Sprintf("[%s](https://github.com/%s)", it.Repo, it.Repo)}
+			if c.Language {
+				cells = append(cells, it.Language)
+			}
+			if c.Stars {
+				cells = append(cells, formatStars(it.Stars))
+			}
+			if c.Commits {
+				cells = append(cells, fmt.Sprintf("%d", it.Commits))
+			}
+			if c.PRs {
+				cells = append(cells, fmt.Sprintf("%d", it.PRs))
+			}
+			if c.Issues {
+				cells = append(cells, fmt.Sprintf("%d", it.Issues))
+			}
+			if c.Reviews {
+				cells = append(cells, fmt.Sprintf("%d", it.Reviews))
+			}
+			if c.Total {
+				cells = append(cells, fmt.Sprintf("%d", it.Total()))
+			}
+			fmt.Fprintf(&b, "| %s |\n", strings.Join(cells, " | "))
 		}
-		if c.Commits {
-			cells = append(cells, fmt.Sprintf("%d", it.Commits))
-		}
-		if c.PRs {
-			cells = append(cells, fmt.Sprintf("%d", it.PRs))
-		}
-		if c.Issues {
-			cells = append(cells, fmt.Sprintf("%d", it.Issues))
-		}
-		if c.Reviews {
-			cells = append(cells, fmt.Sprintf("%d", it.Reviews))
-		}
-		if c.Total {
-			cells = append(cells, fmt.Sprintf("%d", it.Total()))
-		}
-		fmt.Fprintf(&b, "| %s |\n", strings.Join(cells, " | "))
 	}
 	return b.String()
 }

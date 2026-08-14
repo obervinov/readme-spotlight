@@ -44,7 +44,9 @@ Rendered, in order, into the region between `<!--SPOTLIGHT:START-->` and
 3. **What I Do** — focus areas as a titled card.
 4. **Technology & Tools** — your stack, grouped by domain.
 5. **Open-Source Contributions** — external repos with commit/PR/issue counts,
-   as a styled SVG card, an expandable linked list, or both (hybrid).
+   as a styled SVG card, an expandable linked list, or both (hybrid). Optionally
+   split into **Merged code** and **Issues reported** (see
+   [Grouping](#grouping-merged-code-vs-reported-issues)).
 
 Each section is configurable and can be toggled off. All state is stored in the
 database, so nothing has to be reconfigured between runs.
@@ -71,17 +73,39 @@ Prefer just the contributions block, printed to stdout? Skip the UI:
 
 ```sh
 go run ./cmd/readme-spotlight --print --format hybrid
+go run ./cmd/readme-spotlight --print --format details --group-merged
 ```
 
 ## Configuration
 
 Everything is edited in the web UI and persisted in the database: which sections
 are shown, their content and accent colours, the contributions format
-(`table` / `details` / `svg` / `hybrid`), sorting, the target repository and
-markers, the publish mode, and the refresh schedule.
+(`table` / `details` / `svg` / `hybrid`), sorting and grouping, the target
+repository and markers, the publish mode, when a run is allowed to skip its
+commit, and the refresh schedule.
 
 The section content can also be updated by a script or an agent over the
 [machine API](#machine-api).
+
+### Grouping: merged code vs reported issues
+
+Off by default. With **Group merged code separately from filed issues** ticked,
+the contributions render as two groups instead of one list:
+
+- **Merged code** — a commit landed on the default branch, or a pull request was
+  merged.
+- **Issues reported** — everything else: issues, reviews, and pull requests that
+  were closed unmerged or are still open.
+
+Repositories are sorted by stars within each group. The split is a label, not a
+filter: nothing is hidden, and every repository appears in exactly one group.
+
+The distinction needs more than the pull request count, which mixes merged work
+with rejected and still-open pull requests. Merged pull requests are counted by
+their own `is:merged` search when contributions are refreshed, so a configuration
+upgraded from an older version should **Refresh** once before turning grouping
+on — an older snapshot has no merged-pull-request counts, and until it is
+refreshed a repository qualifies on its commits alone.
 
 ## Publishing
 
@@ -89,9 +113,19 @@ The section content can also be updated by a script or an agent over the
   profile's default branch only changes when you merge it.
 - **Direct commit** — commits straight to the target branch.
 
-Both are idempotent — files that have not changed are not rewritten. A built-in
-cron refreshes and republishes on the configured schedule; **Refresh** and
-**Publish** can also be triggered manually from the UI.
+A run lands as **one commit** covering every path it touches, README and SVG
+assets together, and a run whose output matches what is already there commits
+nothing at all.
+
+Third-party star counts drift on their own, so a run can differ only because
+someone else's repository went from 40★ to 41★. **Skip a publish when only star
+counts moved** (off by default) suppresses those too; the numbers then catch up
+with the next real change. It reads the star counts formats mark with ★, which
+the plain table's star column does not — there the option simply never triggers.
+
+A built-in cron refreshes and republishes on the configured schedule — weekly by
+default (`0 6 * * 1`, Mondays at 06:00). **Refresh** and **Publish** can also be
+triggered manually from the UI.
 
 ## Authentication
 
@@ -134,10 +168,11 @@ The API is a second front door to a service that holds a repository-write GitHub
 token, so its reach is capped by design:
 
 - **Content only.** `banner`, `positioning`, `focus`, `tech`, `title`, `format`,
-  `sort_by` and `limit` are writable. The fields deciding *where* and *how* the
-  service writes — target repository and branch, README path, markers, publish
-  mode, PR branch, schedule — are reachable only from the authenticated UI. An
-  unknown or out-of-reach field is rejected with `400`, never ignored.
+  `sort_by`, `limit` and `group_merged` are writable. The fields deciding *where*
+  and *how* the service writes — target repository and branch, README path,
+  markers, publish mode, PR branch, schedule, star-only suppression — are
+  reachable only from the authenticated UI. An unknown or out-of-reach field is
+  rejected with `400`, never ignored.
 - **Pull requests only.** `POST /api/publish` opens a PR even when the stored
   publish mode is `commit`, so an automated caller cannot land an unreviewed
   commit. The stored mode is left untouched.

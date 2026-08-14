@@ -124,6 +124,97 @@ func TestCollectExternalDropsItemsWithoutTitleOrURL(t *testing.T) {
 	}
 }
 
+// The aggregate pull request count says nothing about whether the work landed,
+// so merged pull requests are counted by their own query and annotated onto the
+// repositories the year walk already found.
+func TestCollectExternalCountsMergedPullRequests(t *testing.T) {
+	contribReply := `{"data":{"viewer":{"contributionsCollection":{
+      "commitContributionsByRepository":[],
+      "pullRequestContributions":{"nodes":[
+        {"pullRequest":{"title":"Add a feature","url":"https://github.com/eitchtee/WYGIWYH/pull/557","state":"MERGED",
+          "repository":{"nameWithOwner":"eitchtee/WYGIWYH","owner":{"login":"eitchtee"},"stargazerCount":890}}},
+        {"pullRequest":{"title":"Rejected idea","url":"https://github.com/subzeroid/instagrapi/pull/1","state":"CLOSED",
+          "repository":{"nameWithOwner":"subzeroid/instagrapi","owner":{"login":"subzeroid"},"stargazerCount":23900}}}
+      ]},
+      "issueContributions":{"nodes":[]},
+      "pullRequestReviewContributions":{"nodes":[]}
+    }}}}`
+
+	// One merged pull request in a repository the walk found, and one in a
+	// repository it did not — the latter must not invent an entry.
+	searchReply := `{"data":{"search":{
+      "nodes":[
+        {"repository":{"nameWithOwner":"eitchtee/WYGIWYH"}},
+        {"repository":{"nameWithOwner":"unrelated/elsewhere"}},
+        {"repository":{"nameWithOwner":""}}
+      ],
+      "pageInfo":{"hasNextPage":false,"endCursor":null}
+    }}}`
+
+	c := newTestClient(t, func(q string) string {
+		switch {
+		case strings.Contains(q, "contributionsCollection"):
+			return contribReply
+		case strings.Contains(q, "search("):
+			return searchReply
+		default:
+			return viewerReply
+		}
+	})
+
+	got, err := c.CollectExternal(t.Context())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("collected %d repositories, want the 2 the walk found", len(got))
+	}
+	for _, g := range got {
+		switch g.Repo {
+		case "eitchtee/WYGIWYH":
+			if g.PRsMerged != 1 || !g.HasMergedCode() {
+				t.Errorf("%s: merged = %d, HasMergedCode = %v, want 1 and true", g.Repo, g.PRsMerged, g.HasMergedCode())
+			}
+		case "subzeroid/instagrapi":
+			if g.PRsMerged != 0 || g.HasMergedCode() {
+				t.Errorf("%s: a rejected pull request must not count as landed code (merged = %d)", g.Repo, g.PRsMerged)
+			}
+			if g.PRs != 1 {
+				t.Errorf("%s: PRs = %d, want the pull request still counted", g.Repo, g.PRs)
+			}
+		default:
+			t.Errorf("unexpected repository %s — a merge alone must not create an aggregate", g.Repo)
+		}
+	}
+}
+
+func TestMergedPRsByRepoFollowsPagination(t *testing.T) {
+	page := 0
+	c := newTestClient(t, func(q string) string {
+		if !strings.Contains(q, "search(") {
+			return viewerReply
+		}
+		page++
+		if page == 1 {
+			return `{"data":{"search":{"nodes":[{"repository":{"nameWithOwner":"acme/widget"}}],
+			         "pageInfo":{"hasNextPage":true,"endCursor":"cursor-1"}}}}`
+		}
+		return `{"data":{"search":{"nodes":[{"repository":{"nameWithOwner":"acme/widget"}}],
+		         "pageInfo":{"hasNextPage":false,"endCursor":null}}}}`
+	})
+
+	got, err := c.MergedPRsByRepo(t.Context(), "obervinov")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if page != 2 {
+		t.Fatalf("issued %d search requests, want 2", page)
+	}
+	if got["acme/widget"] != 2 {
+		t.Fatalf("acme/widget = %d merged pull requests, want 2 across both pages", got["acme/widget"])
+	}
+}
+
 func TestCollectExternalSkipsOwnRepositories(t *testing.T) {
 	contribReply := `{"data":{"viewer":{"contributionsCollection":{
       "commitContributionsByRepository":[
