@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.3.0 - 2026-08-14
+### What's Changed
+- Write one commit per run instead of one per file. Publishing went through the contents API, which commits each path separately, so every run left two commits in the target repository — one for the README, one for the contributions asset. Fifty of the last fifty-four commits in the profile repository were these refreshes, twice a day on several days, which makes a contribution graph read as a scheduler rather than as work. Commits now go through the git data API as a single tree, commit and ref update, with force disabled so a branch that moved underneath the run fails rather than being clobbered.
+- Make a run that changes nothing write nothing. Previously an unchanged section still produced commits. The output is compared against the branch before any write, and the commit path checks again by tree SHA — trees are content-addressed, so an identical set of files resolves to the branch's own tree.
+- Add `skip_star_only_changes` (default off) for the remaining source of churn: star counts on other people's repositories move on their own, so a plain comparison still commits when only a number changed. Suppressing that means published counts fall behind, which is why it is opt-in rather than the default. It recognises the star counts a format marks with `★`, so it has no effect on the plain table format, whose star column is a bare number.
+- Add `group_merged` (default off) to render contributions as merged code first and reported issues second, each sorted by stars. Sorting a single list by total activity put a 41-star repository second and a 23.9k-star one thirteenth; sorting it by stars instead would bury actual merged work under repositories that only ever received a bug report. Nothing is dropped or hidden — both groups render in full, and a rejected or long-open pull request still appears, just not among the merged work.
+- Collect `PRsMerged` separately, because the existing pull-request count includes every state. Without it a rejected pull request and one open for two years are indistinguishable from a merged feature, which is precisely the distinction the grouping depends on. Existing snapshots carry no merged count, so a refresh is needed before enabling grouping — until then repositories qualify on commits alone.
+- Change the default schedule to weekly. Contributions change on the order of weeks, and a daily run only produces the no-op commits above. A running instance keeps its schedule in the database and is unaffected.
+- Stop attempting to open a pull request in PR mode when nothing was committed and no pull request exists, which the API rejected with a 422.
+
 ## v0.2.4 - 2026-08-04
 ### What's Changed
 - Keep the database DSN out of the Deployment in the Kubernetes example. It carries the database password, and an env value is readable in any dump of the object — the same inconsistency the example already avoided for `GITHUB_TOKEN`. It moves into the Secret, and the note about guarding the UI now says where the session and OIDC client secrets belong too.
