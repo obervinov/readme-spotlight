@@ -22,5 +22,5 @@ jobs:
     uses: obervinov/_templates/.github/workflows/golang.yaml@v2.2.3
 
   build-pr-image:
-    uses: obervinov/_templates/.github/workflows/docker.yaml@v2.2.3
+    uses: obervinov/_templates/.github/workflows/docker.yaml@v3.6.0
     needs: [pr, golang]
