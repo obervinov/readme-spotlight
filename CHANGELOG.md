@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.2 - 2026-09-18
+### What's Changed
+#### 🐛 Bug Fixes
+* `.github/workflows`: move the reusable workflows to `obervinov/_templates@v4.0.0`. Node 20 is removed from the Actions runner on 2026-09-23, and the pinned templates still called `actions/create-release` (`runs.using: node12`, archived) along with a set of `node20` actions — releases and checks in this repository would stop running.
+#### 📚 Documentation
+* `README.md`: read the Go version from `go.mod` instead of hardcoding `1.25`.
+
+
 ## v0.3.1 - 2026-08-14
 ### What's Changed
 - Rename the second contribution group from `Issues reported` to `Issues & open PRs`. The group holds everything without merged code, which includes pull requests that are still open or were rejected — three repositories in the author's own section sit there with one pull request and no issues at all, under a heading claiming otherwise. The name now describes what the group contains rather than only its largest part.

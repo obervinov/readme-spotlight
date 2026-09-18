@@ -8,7 +8,7 @@
 ![GitHub Release Date](https://img.shields.io/github/release-date/obervinov/readme-spotlight?style=for-the-badge)
 ![GitHub issues](https://img.shields.io/github/issues/obervinov/readme-spotlight?style=for-the-badge)
 ![GitHub repo size](https://img.shields.io/github/repo-size/obervinov/readme-spotlight?style=for-the-badge)
-[![Go version](https://img.shields.io/badge/go-1.25-blue.svg?style=for-the-badge)](https://go.dev/dl/)
+[![Go version](https://img.shields.io/github/go-mod/go-version/obervinov/readme-spotlight?style=for-the-badge&color=blue&label=go)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 Self-hosted tool that composes a GitHub profile README from styled SVG sections

@@ -16,11 +16,11 @@ permissions:
 
 jobs:
   pr:
-    uses: obervinov/_templates/.github/workflows/pr.yaml@v2.2.3
+    uses: obervinov/_templates/.github/workflows/pr.yaml@v4.0.0
 
   golang:
-    uses: obervinov/_templates/.github/workflows/golang.yaml@v2.2.3
+    uses: obervinov/_templates/.github/workflows/golang.yaml@v4.0.0
 
   build-pr-image:
-    uses: obervinov/_templates/.github/workflows/docker.yaml@v2.2.3
+    uses: obervinov/_templates/.github/workflows/docker.yaml@v4.0.0
     needs: [pr, golang]
