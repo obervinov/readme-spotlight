@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.3 - 2026-10-11
+### What's Changed
+#### 🔧 CI
+* Workflows use `obervinov/_templates` `v4.2.0`: Dependabot pull requests pass without a `CHANGELOG.md` bump and merge without a release, so the update ships with the next one. The image build after the release runs only when a release was actually created, so such a merge cannot overwrite the image of a version that is already out.
+
 ## v0.3.2 - 2026-09-18
 ### What's Changed
 #### 🐛 Bug Fixes
