@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.4 - 2026-10-26
+### What's Changed
+#### 🔒 Security
+* Image: build with Go 1.27 (was 1.25) and run on `alpine:3.24` with `apk upgrade` (was `alpine:3.20`, end of life). The new base carries the `ca-certificates` that drop the eMudhra intermediates revoked on 2026-10-20; the old image still trusted them for outbound TLS, including the calls to GitHub and the OIDC provider.
+#### ⬆️ Dependencies
+* `modernc.org/sqlite` 1.55.0 → 1.60.0, `github.com/coreos/go-oidc/v3` 3.20.0 → 3.21.0, `golang.org/x/oauth2` 0.36.0 → 0.37.0, `github.com/jackc/pgx/v5` 5.10.0 → 5.11.0 (supersedes #20–#23). `go.mod` now requires Go 1.26, which the new `modernc.org/libc` needs.
+
 ## v0.3.3 - 2026-10-11
 ### What's Changed
 #### 🔧 CI

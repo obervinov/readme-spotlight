@@ -1,5 +1,5 @@
 # Build a static binary (modernc SQLite is pure Go, so CGO stays off).
-FROM golang:1.25 AS build
+FROM golang:1.27 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -11,8 +11,10 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/readme-spotlight .
 # needs a runnable command in the image. CMD (not ENTRYPOINT) keeps that check
 # working: `docker run <image> uname -m` overrides it, `docker run <image>`
 # starts the server.
-FROM alpine:3.20
-RUN adduser -D -u 65532 app && mkdir -p /data && chown app /data
+FROM alpine:3.24
+# apk upgrade: the base image can lag a security fix in its own packages
+# (ca-certificates for the 2026-10 eMudhra distrust is the case in point).
+RUN apk upgrade --no-cache && adduser -D -u 65532 app && mkdir -p /data && chown app /data
 COPY --from=build /out/readme-spotlight /usr/local/bin/readme-spotlight
 USER app
 EXPOSE 8080
